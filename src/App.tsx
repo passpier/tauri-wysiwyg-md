@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { save } from '@tauri-apps/plugin-dialog';
+import { listen } from '@tauri-apps/api/event';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import { Editor } from '@/components/Editor/Editor';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
 import { Toolbar } from '@/components/Toolbar/Toolbar';
@@ -19,6 +20,8 @@ import {
   PanelLeft,
   X,
   FileText,
+  FilePlus,
+  FolderOpen,
 } from 'lucide-react';
 
 function App() {
@@ -27,6 +30,8 @@ function App() {
   const saveDocument = useDocumentStore((state) => state.saveDocument);
   const closeDocument = useDocumentStore((state) => state.closeDocument);
   const updateContent = useDocumentStore((state) => state.updateContent);
+  const createNewDocument = useDocumentStore((state) => state.createNewDocument);
+  const loadDocument = useDocumentStore((state) => state.loadDocument);
   
   const theme = useUIStore((state) => state.theme);
   const toggleTheme = useUIStore((state) => state.toggleTheme);
@@ -53,9 +58,42 @@ function App() {
     }
   }, [theme]);
 
+  const handleOpenFile = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          {
+            name: 'Markdown',
+            extensions: ['md', 'markdown'],
+          },
+        ],
+      });
+
+      const filePath = Array.isArray(selected) ? selected[0] : selected;
+      if (filePath && typeof filePath === 'string') {
+        await loadDocument(filePath);
+      }
+    } catch (error) {
+      console.error('Open file failed:', error);
+    }
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Cmd/Ctrl + N: New file
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        createNewDocument();
+      }
+
+      // Cmd/Ctrl + O: Open file
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+        e.preventDefault();
+        await handleOpenFile();
+      }
+
       // Cmd/Ctrl + S: Save
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
@@ -90,7 +128,37 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeDocumentId, activeDocument, saveDocument, closeDocument, toggleSidebar]);
+  }, [
+    activeDocumentId,
+    activeDocument,
+    saveDocument,
+    closeDocument,
+    toggleSidebar,
+    createNewDocument,
+    handleOpenFile,
+  ]);
+
+  // Native menu events
+  useEffect(() => {
+    let unlistenNew: (() => void) | undefined;
+    let unlistenOpen: (() => void) | undefined;
+
+    const setupListeners = async () => {
+      unlistenNew = await listen('menu-new-file', () => {
+        createNewDocument();
+      });
+      unlistenOpen = await listen('menu-open-file', () => {
+        void handleOpenFile();
+      });
+    };
+
+    setupListeners();
+
+    return () => {
+      unlistenNew?.();
+      unlistenOpen?.();
+    };
+  }, [createNewDocument, handleOpenFile]);
 
   const handleSaveAs = async () => {
     if (!activeDocumentId || !activeDocument) return;
@@ -152,6 +220,15 @@ function App() {
           </Button>
           <Separator orientation="vertical" className="h-6" />
           <h1 className="font-semibold text-lg">Markdown Editor</h1>
+          <Separator orientation="vertical" className="h-6" />
+          <Button variant="ghost" size="sm" onClick={createNewDocument}>
+            <FilePlus className="w-4 h-4 mr-2" />
+            New
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleOpenFile}>
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Open
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">

@@ -29,19 +29,6 @@ A modern, desktop Markdown editor built with [Tauri](https://tauri.app/), [React
 - [pnpm](https://pnpm.io/) (or npm/yarn)
 - [Rust](https://www.rust-lang.org/) (for Tauri desktop builds)
 
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd tauri-wysiwyg-md
-```
-
-2. Install dependencies:
-```bash
-pnpm install
-```
-
 ### Development
 
 Start the development server with hot reload:
@@ -104,7 +91,3 @@ pnpm tauri build
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Feel free to open issues or submit pull requests.

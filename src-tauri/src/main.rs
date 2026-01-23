@@ -6,7 +6,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
-use tauri::State;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::{Emitter, State};
 
 // State management
 struct AppState {
@@ -151,6 +152,59 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             recent_files: Mutex::new(VecDeque::new()),
+        })
+        .menu(|handle| {
+            let menu = Menu::default(handle)?;
+            let new_item = MenuItem::with_id(
+                handle,
+                "file_new",
+                "New File",
+                true,
+                Some("CmdOrCtrl+N"),
+            )?;
+            let open_item = MenuItem::with_id(
+                handle,
+                "file_open",
+                "Open...",
+                true,
+                Some("CmdOrCtrl+O"),
+            )?;
+            let separator = PredefinedMenuItem::separator(handle)?;
+
+            let mut file_menu_found = false;
+            for item in menu.items()? {
+                if let Some(submenu) = item.as_submenu() {
+                    if submenu.text()? == "File" {
+                        submenu.prepend_items(&[&new_item, &open_item, &separator])?;
+                        file_menu_found = true;
+                        break;
+                    }
+                }
+            }
+
+            if !file_menu_found {
+                let file_menu = Submenu::with_items(
+                    handle,
+                    "File",
+                    true,
+                    &[
+                        &new_item,
+                        &open_item,
+                        &separator,
+                        &PredefinedMenuItem::close_window(handle, None)?,
+                    ],
+                )?;
+                menu.append(&file_menu)?;
+            }
+
+            Ok(menu)
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == "file_new" {
+                let _ = app.emit("menu-new-file", ());
+            } else if event.id() == "file_open" {
+                let _ = app.emit("menu-open-file", ());
+            }
         })
         .invoke_handler(tauri::generate_handler![
             read_markdown_file,
