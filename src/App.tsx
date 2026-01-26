@@ -288,7 +288,9 @@ function App() {
   }, [osPlatform]);
 
   const handleTitlebarMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('.titlebar-no-drag')) {
+    const target = event.target as HTMLElement;
+    const isNoDrag = !!target.closest('.titlebar-no-drag');
+    if (isNoDrag) {
       return;
     }
     try {

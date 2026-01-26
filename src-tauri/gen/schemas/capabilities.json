@@ -1,1 +1,1 @@
-{"main-event-listen":{"identifier":"main-event-listen","description":"Allow main window to listen/unlisten to core events.","local":true,"windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten","dialog:allow-open","dialog:allow-save"]}}
+{"main-event-listen":{"identifier":"main-event-listen","description":"Allow main window to listen/unlisten to core events.","local":true,"windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten","core:window:allow-start-dragging","dialog:allow-open","dialog:allow-save"]}}
