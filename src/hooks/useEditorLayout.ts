@@ -32,7 +32,7 @@ export function useEditorLayout(containerRef: React.RefObject<HTMLDivElement>) {
   });
 
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const measureTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const measureTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const calculateMetrics = () => {

@@ -236,7 +236,7 @@ export function debounceLayoutCalculation(
   callback: () => void,
   delay: number = 100
 ): (() => void) {
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   return () => {
     if (timeoutId) {

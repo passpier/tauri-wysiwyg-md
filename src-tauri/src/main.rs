@@ -408,13 +408,73 @@ fn main() {
                 true,
                 None::<&str>,
             )?;
-            let toggle_theme_item = MenuItem::with_id(
+            
+            // Create theme submenu items
+            let theme_github_light = MenuItem::with_id(
                 handle,
-                "view_toggle_theme",
-                "Toggle Theme",
+                "view_theme_github_light",
+                "GitHub Light",
                 true,
-                Some("CmdOrCtrl+T"),
+                None::<&str>,
             )?;
+            let theme_github_dark = MenuItem::with_id(
+                handle,
+                "view_theme_github_dark",
+                "GitHub Dark",
+                true,
+                None::<&str>,
+            )?;
+            let theme_dracula = MenuItem::with_id(
+                handle,
+                "view_theme_dracula",
+                "Dracula",
+                true,
+                None::<&str>,
+            )?;
+            let theme_nord_light = MenuItem::with_id(
+                handle,
+                "view_theme_nord_light",
+                "Nord Light",
+                true,
+                None::<&str>,
+            )?;
+            let theme_nord_dark = MenuItem::with_id(
+                handle,
+                "view_theme_nord_dark",
+                "Nord Dark",
+                true,
+                None::<&str>,
+            )?;
+            let theme_solarized_light = MenuItem::with_id(
+                handle,
+                "view_theme_solarized_light",
+                "Solarized Light",
+                true,
+                None::<&str>,
+            )?;
+            let theme_solarized_dark = MenuItem::with_id(
+                handle,
+                "view_theme_solarized_dark",
+                "Solarized Dark",
+                true,
+                None::<&str>,
+            )?;
+            
+            let theme_menu = Submenu::with_items(
+                handle,
+                "Theme",
+                true,
+                &[
+                    &theme_github_light,
+                    &theme_github_dark,
+                    &theme_dracula,
+                    &theme_nord_light,
+                    &theme_nord_dark,
+                    &theme_solarized_light,
+                    &theme_solarized_dark,
+                ],
+            )?;
+            
             let view_separator = PredefinedMenuItem::separator(handle)?;
             let mut view_menu_found = false;
             for item in menu.items()? {
@@ -422,7 +482,7 @@ fn main() {
                     if submenu.text()? == "View" {
                         submenu.prepend_items(&[
                             &toggle_sidebar_item,
-                            &toggle_theme_item,
+                            &theme_menu,
                             &view_separator,
                         ])?;
                         view_menu_found = true;
@@ -435,7 +495,7 @@ fn main() {
                     handle,
                     "View",
                     true,
-                    &[&toggle_sidebar_item, &toggle_theme_item],
+                    &[&toggle_sidebar_item, &theme_menu],
                 )?;
                 menu.append(&view_menu)?;
             }
@@ -455,8 +515,20 @@ fn main() {
                 let _ = app.emit("menu-close-document", ());
             } else if event.id() == "view_toggle_sidebar" {
                 let _ = app.emit("menu-toggle-sidebar", ());
-            } else if event.id() == "view_toggle_theme" {
-                let _ = app.emit("menu-toggle-theme", ());
+            } else if event.id() == "view_theme_github_light" {
+                let _ = app.emit("menu-set-theme", "github-light");
+            } else if event.id() == "view_theme_github_dark" {
+                let _ = app.emit("menu-set-theme", "github-dark");
+            } else if event.id() == "view_theme_dracula" {
+                let _ = app.emit("menu-set-theme", "dracula");
+            } else if event.id() == "view_theme_nord_light" {
+                let _ = app.emit("menu-set-theme", "nord-light");
+            } else if event.id() == "view_theme_nord_dark" {
+                let _ = app.emit("menu-set-theme", "nord-dark");
+            } else if event.id() == "view_theme_solarized_light" {
+                let _ = app.emit("menu-set-theme", "solarized-light");
+            } else if event.id() == "view_theme_solarized_dark" {
+                let _ = app.emit("menu-set-theme", "solarized-dark");
             } else if event.id() == "editor_bold" {
                 emit_editor_command(app, "bold", None);
             } else if event.id() == "editor_italic" {

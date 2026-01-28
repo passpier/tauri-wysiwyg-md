@@ -8,9 +8,6 @@ import {
   Italic,
   Strikethrough,
   Code,
-  Heading1,
-  Heading2,
-  Heading3,
   List,
   ListOrdered,
   Quote,
@@ -27,12 +24,6 @@ export function Toolbar({ editor }: ToolbarProps) {
   if (!editor) {
     return null;
   }
-
-  const headingButtons = [
-    { level: 1, icon: Heading1, label: 'Heading 1' },
-    { level: 2, icon: Heading2, label: 'Heading 2' },
-    { level: 3, icon: Heading3, label: 'Heading 3' },
-  ];
 
   return (
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

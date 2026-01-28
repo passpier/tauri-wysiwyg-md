@@ -6,7 +6,7 @@ export const useAutoSave = () => {
   const autoSave = useSettingsStore((state) => state.autoSave);
   const interval = useSettingsStore((state) => state.autoSaveInterval);
   const saveDocument = useDocumentStore((state) => state.saveDocument);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!autoSave) {

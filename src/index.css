@@ -4,55 +4,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    /* Theme CSS variables (defaults to GitHub Light) */
+    --bg-primary: 0 0% 100%;
+    --bg-secondary: 0 0% 97%;
+    --bg-code: 0 0% 97%;
+    --bg-blockquote: 0 0% 97%;
+    --bg-inline-code: 0 0% 91%;
+    --bg-selection: 60 100% 80%;
+    
+    --text-primary: 0 0% 15%;
+    --text-heading: 220 90% 40%;
+    --text-muted: 0 0% 40%;
+    
+    --link-color: 217 91% 60%;
+    --link-hover: 217 91% 52%;
+    --link-visited: 280 82% 60%;
+    
+    --border-color: 0 0% 85%;
+    --border-muted: 0 0% 91%;
+    --border-blockquote: 0 0% 85%;
+    
+    --syntax-keyword: 330 60% 50%;
+    --syntax-string: 200 60% 40%;
+    --syntax-number: 217 91% 60%;
+    --syntax-comment: 0 0% 40%;
+    --syntax-function: 260 89% 60%;
+    --syntax-variable: 217 91% 60%;
+    --syntax-operator: 0 0% 15%;
+    --syntax-class: 260 89% 60%;
+    --syntax-tag: 217 91% 60%;
+    
+    --table-header-bg: 0 0% 97%;
+    --table-header-text: 0 0% 15%;
+    --table-row-alt: 0 0% 97%;
+    --checkbox-checked: 217 91% 60%;
+    --checkbox-unchecked: 0 0% 85%;
+    
+    /* Theme transitions */
+    --transition-duration: 200ms;
+    --transition-timing: ease-in-out;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  /* Respect prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --transition-duration: 0ms;
+    }
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border transition-colors;
+    transition-duration: var(--transition-duration);
+    transition-timing-function: var(--transition-timing);
   }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -97,26 +104,32 @@
 
 .tiptap h1 {
   @apply text-4xl font-bold mb-4 mt-8;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap h2 {
   @apply text-3xl font-bold mb-3 mt-6;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap h3 {
   @apply text-2xl font-bold mb-2 mt-5;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap h4 {
   @apply text-xl font-bold mb-2 mt-4;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap h5 {
   @apply text-lg font-bold mb-2 mt-3;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap h6 {
   @apply text-base font-bold mb-2 mt-2;
+  color: hsl(var(--text-heading));
 }
 
 .tiptap p {
@@ -141,27 +154,47 @@
 }
 
 .tiptap code {
-  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply px-1.5 py-0.5 rounded text-sm font-mono;
+  background-color: hsl(var(--bg-inline-code));
+  color: hsl(var(--syntax-keyword));
 }
 
 .tiptap pre {
-  @apply bg-muted p-4 rounded-lg mb-4 overflow-x-auto;
+  @apply p-4 rounded-lg mb-4 overflow-x-auto;
+  background-color: hsl(var(--bg-code));
+  color: hsl(var(--text-primary));
+  border: 1px solid hsl(var(--border-color));
 }
 
 .tiptap pre code {
   @apply bg-transparent p-0 text-sm;
+  color: inherit;
 }
 
 .tiptap blockquote {
-  @apply border-l-4 border-primary pl-4 italic mb-4;
+  @apply pl-4 italic mb-4;
+  border-left: 4px solid hsl(var(--border-blockquote));
+  background-color: hsl(var(--bg-blockquote));
+  padding: 1rem;
+  color: hsl(var(--text-muted));
 }
 
 .tiptap hr {
-  @apply my-8 border-border;
+  @apply my-8;
+  border-color: hsl(var(--border-color));
 }
 
 .tiptap a {
-  @apply text-primary underline hover:text-primary/80;
+  color: hsl(var(--link-color));
+  @apply underline transition-colors;
+}
+
+.tiptap a:hover {
+  color: hsl(var(--link-hover));
+}
+
+.tiptap a:visited {
+  color: hsl(var(--link-visited));
 }
 
 .tiptap strong {
@@ -190,9 +223,71 @@
 }
 
 .tiptap ul[data-type="taskList"] li > label {
-  @apply mr-2 mt-1;
+  @apply mr-2 mt-1 cursor-pointer;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: hsl(var(--checkbox-checked));
 }
 
 .tiptap ul[data-type="taskList"] li > div {
   @apply flex-1;
+}
+
+/* Table styles */
+.tiptap table {
+  @apply w-full border-collapse mb-4;
+  border: 1px solid hsl(var(--border-color));
+}
+
+.tiptap table th {
+  background-color: hsl(var(--table-header-bg));
+  color: hsl(var(--table-header-text));
+  @apply font-bold p-3 text-left border;
+  border-color: hsl(var(--border-color));
+}
+
+.tiptap table td {
+  @apply p-3 border;
+  border-color: hsl(var(--border-color));
+}
+
+.tiptap table tbody tr:nth-child(odd) {
+  background-color: hsl(var(--table-row-alt) / 0.5);
+}
+
+/* Selection styles */
+.tiptap ::selection {
+  background-color: hsl(var(--bg-selection));
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tiptap {
+    @apply p-4;
+  }
+
+  .tiptap h1 {
+    @apply text-2xl;
+  }
+
+  .tiptap h2 {
+    @apply text-xl;
+  }
+
+  .tiptap pre {
+    @apply text-xs;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tiptap table {
+    @apply text-xs;
+  }
+
+  .tiptap table th,
+  .tiptap table td {
+    @apply p-2;
+  }
 }

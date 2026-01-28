@@ -6,6 +6,7 @@ import { platform } from '@tauri-apps/plugin-os';
 import { WindowTitlebar } from 'tauri-controls';
 import { Editor } from '@/components/Editor/Editor';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
+import { ThemeSelector } from '@/components/ThemeSelector';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -24,8 +25,7 @@ function App() {
   const createNewDocument = useDocumentStore((state) => state.createNewDocument);
   const loadDocument = useDocumentStore((state) => state.loadDocument);
   
-  const theme = useUIStore((state) => state.theme);
-  const toggleTheme = useUIStore((state) => state.toggleTheme);
+  const initializeTheme = useUIStore((state) => state.initializeTheme);
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
   const hasInitializedDocument = useRef(false);
@@ -39,14 +39,10 @@ function App() {
 
   const activeDocument = documents.find(d => d.id === activeDocumentId);
 
-  // Apply theme
+  // Initialize theme on mount
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    initializeTheme();
+  }, [initializeTheme]);
 
   useEffect(() => {
     let isActive = true;
@@ -289,8 +285,10 @@ function App() {
           listen('menu-toggle-sidebar', () => {
             toggleSidebar();
           }),
-          listen('menu-toggle-theme', () => {
-            toggleTheme();
+          listen<string>('menu-set-theme', (event) => {
+            const themeName = event.payload as any;
+            const setCurrentTheme = useUIStore.getState().setCurrentTheme;
+            setCurrentTheme(themeName);
           }),
           listen<{ command: string; level?: number }>(
             'menu-editor-command',
@@ -318,7 +316,7 @@ function App() {
       menuUnlistenersRef.current.forEach(unlisten => unlisten());
       menuUnlistenersRef.current = [];
     };
-  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar, toggleTheme]);
+  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar]);
 
   const titlebarClassName = useMemo(() => {
     if (osPlatform === 'macos') {
@@ -376,6 +374,7 @@ function App() {
                 <span className="text-xs font-semibold text-amber-500">Edited</span>
               )}
             </div>
+            <ThemeSelector />
             {osPlatform === 'macos' && (
               <button
                 type="button"
