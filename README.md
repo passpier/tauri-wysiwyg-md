@@ -2,6 +2,15 @@
 
 A modern, desktop Markdown editor built with [Tauri](https://tauri.app/), [React](https://react.dev/), and [Tiptap](https://tiptap.dev/). Edit Markdown documents with a beautiful WYSIWYG interface and rich text formatting.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="./screenshots/home.png" alt="Home Page" width="100%"></td>
+    <td><img src="./screenshots/home_without_sidebar.png" alt="Home Without Sidebar Page" width="100%"></td>
+  </tr>
+</table>
+
 ## Features
 
 - **WYSIWYG Markdown Editing** - Edit Markdown with a visual interface powered by Tiptap v2
