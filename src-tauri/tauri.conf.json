@@ -31,7 +31,7 @@
     "targets": ["dmg", "msi", "nsis"],
     "fileAssociations": [
       {
-        "ext": "md",
+        "ext": ["md"],
         "name": "Markdown",
         "description": "Markdown document",
         "mimeType": "text/markdown",
