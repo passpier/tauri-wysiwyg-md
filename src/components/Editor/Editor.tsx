@@ -9,7 +9,7 @@ import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
 import { all, createLowlight } from 'lowlight';
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -30,7 +30,7 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
   const setEditor = useEditorStore((state) => state.setEditor);
   const containerRef = useRef<HTMLDivElement>(null);
   const layoutMetrics = useEditorLayout(containerRef);
-
+  const [hasMeasuredLayout, setHasMeasuredLayout] = useState(false);
   const document = documents.find(d => d.id === documentId);
 
   // Create lowlight instance with comprehensive language support
@@ -122,9 +122,12 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
     }
   }, [fontSize, fontFamily, editor, layoutMetrics.contentWidth]);
 
-  // REMOVED: Manual DOM manipulation was causing infinite loops
-  // Syntax highlighting is already applied by lowlight
-  // Use CSS pseudo-elements for language labels instead
+  useEffect(() => {
+    if (!hasMeasuredLayout && layoutMetrics.contentWidth > 0) {
+      setHasMeasuredLayout(true);
+    }
+  }, [hasMeasuredLayout, layoutMetrics.contentWidth]);
+
 
   if (!document) {
     return (
@@ -145,9 +148,9 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
         className="h-full"
         style={{
           width: '100%',
-          maxWidth: `${layoutMetrics.contentWidth}px`,
-          transition: 'max-width 200ms ease, width 200ms ease',
-          willChange: 'max-width, width',
+          maxWidth: hasMeasuredLayout ? `${layoutMetrics.contentWidth}px` : undefined,
+          transition: hasMeasuredLayout ? 'max-width 200ms ease, width 200ms ease' : 'none',
+          willChange: hasMeasuredLayout ? 'max-width, width' : 'auto',
         }}
       />
     </div>
