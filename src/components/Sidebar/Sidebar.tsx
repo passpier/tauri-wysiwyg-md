@@ -184,7 +184,7 @@ export const Sidebar = memo(function Sidebar() {
             </div>
           )
         ) : (
-          <div className="text-sm text-muted-foreground text-center mt-8">
+          <div className="text-sm text-muted-foreground text-center mt-8 truncate">
             Open a folder to browse files
           </div>
         )}

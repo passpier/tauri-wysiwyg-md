@@ -8,7 +8,7 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
-import { all, createLowlight } from 'lowlight';
+import { createLowlight, common } from 'lowlight';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -33,9 +33,9 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
   const [hasMeasuredLayout, setHasMeasuredLayout] = useState(false);
   const document = documents.find(d => d.id === documentId);
 
-  // Create lowlight instance with comprehensive language support
-  // Using 'all' includes 180+ languages for syntax highlighting
-  const lowlight = useMemo(() => createLowlight(all), []);
+  // Create lowlight instance with a smaller default language set
+  // 'common' covers popular languages while keeping bundle size smaller
+  const lowlight = useMemo(() => createLowlight(common), []);
 
   const MermaidCodeBlock = useMemo(() => {
     return CodeBlockLowlight.extend({

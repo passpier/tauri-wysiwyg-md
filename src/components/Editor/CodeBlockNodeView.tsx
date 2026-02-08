@@ -1,9 +1,16 @@
 import { NodeViewContent, NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
-import mermaid from 'mermaid';
 import { useEffect, useRef, useState } from 'react';
 import { normalizeLanguage } from '@/lib/codeBlockUtils';
 
 let mermaidInitialized = false;
+let mermaidModule: typeof import('mermaid') | null = null;
+
+const loadMermaid = async () => {
+  if (!mermaidModule) {
+    mermaidModule = await import('mermaid');
+  }
+  return (mermaidModule as any).default ?? mermaidModule;
+};
 
 export function CodeBlockNodeView({ node }: NodeViewProps) {
   const language = normalizeLanguage(node.attrs.language || '');
@@ -13,22 +20,42 @@ export function CodeBlockNodeView({ node }: NodeViewProps) {
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
+  const mermaidRef = useRef<any | null>(null);
+  const [mermaidReady, setMermaidReady] = useState(false);
 
   useEffect(() => {
     if (!isMermaid) return;
 
-    if (!mermaidInitialized) {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: 'neutral',
-      });
-      mermaidInitialized = true;
-    }
+    let cancelled = false;
+    const init = async () => {
+      try {
+        const mermaid = await loadMermaid();
+        if (cancelled) return;
+        mermaidRef.current = mermaid;
+        if (!mermaidInitialized) {
+          mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'strict',
+            theme: 'neutral',
+          });
+          mermaidInitialized = true;
+        }
+        setMermaidReady(true);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to load mermaid');
+        }
+      }
+    };
+
+    void init();
+    return () => {
+      cancelled = true;
+    };
   }, [isMermaid]);
 
   useEffect(() => {
-    if (!isMermaid) return;
+    if (!isMermaid || !mermaidReady || !mermaidRef.current) return;
 
     const trimmed = code.trim();
     if (trimmed.length === 0) {
@@ -41,7 +68,7 @@ export function CodeBlockNodeView({ node }: NodeViewProps) {
     const render = async () => {
       setIsRendering(true);
       try {
-        const { svg: rendered } = await mermaid.render(renderIdRef.current, trimmed);
+        const { svg: rendered } = await mermaidRef.current.render(renderIdRef.current, trimmed);
         if (!cancelled) {
           setSvg(rendered);
           setError(null);
@@ -62,7 +89,7 @@ export function CodeBlockNodeView({ node }: NodeViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [code, isMermaid]);
+  }, [code, isMermaid, mermaidReady]);
 
   if (!isMermaid) {
     return (
