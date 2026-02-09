@@ -1,13 +1,14 @@
 {
-  "identifier": "main-event-listen",
-  "description": "Allow main window to listen/unlisten to core events.",
+  "identifier": "main-capability",
+  "description": "Allow main window to use necessary features.",
   "windows": ["main"],
   "permissions": [
-    "core:event:allow-listen",
-    "core:event:allow-unlisten",
-    "core:window:allow-start-dragging",
-    "core:window:allow-is-fullscreen",
-    "dialog:allow-open",
-    "dialog:allow-save"
+    "core:default",
+    "dialog:default",
+    "os:default",
+    "fs:default",
+    "fs:read-all",
+    "fs:write-all",
+    "allow-all-commands"
   ]
 }

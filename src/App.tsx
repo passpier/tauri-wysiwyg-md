@@ -45,50 +45,52 @@ function App() {
     initializeTheme();
   }, [initializeTheme]);
 
-  // Load any pending files requested by the OS (file association).
+  // Load any pending files requested by the OS (file association) and listen for new ones.
   useEffect(() => {
     let isActive = true;
-    const loadPending = async () => {
-      try {
-        const pending = await invoke<string[]>('take_pending_open_files');
-        if (!isActive) return;
-        await Promise.all(
-          pending.map(async (path) => {
-            try {
-              await loadDocument(path);
-            } catch (error) {
-              console.warn('Failed to load pending file:', path, error);
-            }
-          })
-        );
-      } catch (error) {
-        console.warn('Failed to fetch pending open files:', error);
-      }
-    };
-
-    void loadPending();
-    return () => {
-      isActive = false;
-    };
-  }, [loadDocument]);
-
-  // Listen for "open-file" events from native side.
-  useEffect(() => {
     let unlisten: (() => void) | undefined;
 
-    listen<string>('open-file', (event) => {
-      if (event.payload) {
-        void loadDocument(event.payload);
-      }
-    })
-      .then((stop) => {
+    const setupFileHandling = async () => {
+      try {
+        // 1. First set up the listener for future events (e.g. via single-instance)
+        const stop = await listen<string>('open-file', (event) => {
+          if (event.payload) {
+            console.log('📬 Received open-file event:', event.payload);
+            void loadDocument(event.payload);
+          }
+        });
+        
+        if (!isActive) {
+          stop();
+          return;
+        }
         unlisten = stop;
-      })
-      .catch((error) => {
-        console.warn('Failed to listen for open-file events:', error);
-      });
+
+        // 2. Then check for any files that arrived during startup
+        const pending = await invoke<string[]>('take_pending_open_files');
+        if (!isActive) return;
+
+        if (pending.length > 0) {
+          console.log('📥 Loading pending files:', pending);
+          await Promise.all(
+            pending.map(async (path) => {
+              try {
+                await loadDocument(path);
+              } catch (error) {
+                console.warn('Failed to load pending file:', path, error);
+              }
+            })
+          );
+        }
+      } catch (error) {
+        console.warn('Failed to setup file handling:', error);
+      }
+    };
+
+    void setupFileHandling();
 
     return () => {
+      isActive = false;
       unlisten?.();
     };
   }, [loadDocument]);

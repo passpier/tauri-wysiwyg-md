@@ -176,17 +176,21 @@ fn normalize_open_path(arg: &str) -> Option<String> {
         return None;
     }
 
-    let mut path_str = trimmed.to_string();
-    if let Some(stripped) = path_str.strip_prefix("file://") {
-        path_str = stripped.to_string();
-    }
+    let path_str = if let Ok(url) = tauri::Url::parse(trimmed) {
+        if url.scheme() == "file" {
+            url.to_file_path().ok()
+        } else {
+            None
+        }
+    } else {
+        Some(PathBuf::from(trimmed))
+    };
 
-    // Basic decode for spaces in file:// URLs
-    if path_str.contains("%20") {
-        path_str = path_str.replace("%20", " ");
-    }
+    let path = match path_str {
+        Some(p) => p,
+        None => return None,
+    };
 
-    let path = PathBuf::from(&path_str);
     if !path.is_file() {
         return None;
     }
@@ -227,7 +231,7 @@ fn queue_open_files(app: &AppHandle, paths: Vec<String>) {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
@@ -246,6 +250,7 @@ fn main() {
             Ok(())
         })
         .menu(|handle| {
+            // ... (rest of menu code remains the same)
             let menu = Menu::default(handle)?;
             let new_item = MenuItem::with_id(
                 handle,
@@ -641,6 +646,24 @@ fn main() {
             file_exists,
             take_pending_open_files,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::Opened { urls } = event {
+            let paths: Vec<String> = urls
+                .into_iter()
+                .filter_map(|url| {
+                    if url.scheme() == "file" {
+                        url.to_file_path()
+                            .ok()
+                            .map(|p| p.to_string_lossy().to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            queue_open_files(app_handle, paths);
+        }
+    });
 }

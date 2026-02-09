@@ -1,0 +1,15 @@
+[[permission]]
+identifier = "allow-all-commands"
+description = "Allow all custom commands in main.rs"
+commands.allow = [
+  "read_markdown_file",
+  "save_markdown_file",
+  "list_directory",
+  "get_recent_files",
+  "add_recent_file",
+  "create_file",
+  "delete_file",
+  "rename_file",
+  "file_exists",
+  "take_pending_open_files"
+]
