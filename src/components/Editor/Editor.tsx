@@ -63,9 +63,6 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
         transformPastedText: true,
         transformCopiedText: true,
       }),
-      Placeholder.configure({
-        placeholder: 'Start writing...',
-      }),
       Typography,
       Table.configure({
         resizable: true,

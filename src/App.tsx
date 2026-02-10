@@ -190,21 +190,9 @@ function App() {
   // Ensure a blank document exists for first launch
   useEffect(() => {
     if (!hasInitializedDocument.current && documents.length === 0 && !activeDocumentId) {
-      const initializeApp = async () => {
-        try {
-          const pending = await invoke<string[]>('take_pending_open_files');
-          if (pending.length === 0) {
-            // Only create blank document if no pending files
-            createNewDocument();
-          }
-        } catch (error) {
-          console.warn('Failed to check pending files:', error);
-          createNewDocument();
-        }
-        hasInitializedDocument.current = true;
-      };
-      
-      void initializeApp();
+      createNewDocument();
+      hasInitializedDocument.current = true;
+
     }
   }, [documents.length, activeDocumentId, createNewDocument]);
 
@@ -481,10 +469,6 @@ function App() {
                 <p className="text-sm mt-2">
                   Create a new document or open an existing one
                 </p>
-                <div className="mt-6 flex items-center justify-center gap-2 text-sm">
-                  <span className="inline-block w-0.5 h-5 bg-muted-foreground/70 animate-pulse" />
-                  <span>Start writing...</span>
-                </div>
               </div>
             </div>
           )}
