@@ -109,6 +109,13 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
     }
   }, [document?.content, editor, documentId]);
 
+  // Reset scroll position when switching documents
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, [documentId]);
+
   // Apply font settings and responsive layout
   useEffect(() => {
     if (editor) {
