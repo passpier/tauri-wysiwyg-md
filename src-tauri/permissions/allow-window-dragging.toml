@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-window-dragging"
+description = "Allow window dragging from custom titlebar"
+windows.allow = ["window:allow-start-dragging"]

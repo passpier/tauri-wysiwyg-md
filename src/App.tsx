@@ -395,17 +395,16 @@ function App() {
     <div className="h-screen flex flex-col">
       {!isFullscreen && (
         <WindowTitlebar
-          className={`${titlebarClassName} titlebar-drag`}
+          className={`${titlebarClassName}`}
           controlsOrder="system"
           windowControlsProps={{
             justify: true,
             platform: osPlatform ?? undefined,
             hide: osPlatform === 'macos',
           }}
-          data-tauri-drag-region
           onMouseDown={handleTitlebarMouseDown}
         >
-          <div className="flex w-full items-center gap-2 titlebar-drag" data-tauri-drag-region>
+          <div className="flex w-full items-center gap-2">
             {osPlatform !== 'macos' && (
               <button
                 type="button"

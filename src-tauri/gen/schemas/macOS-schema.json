@@ -1983,6 +1983,12 @@
           "markdownDescription": "Allow all custom commands in main.rs"
         },
         {
+          "description": "Allow window dragging from custom titlebar",
+          "type": "string",
+          "const": "allow-window-dragging",
+          "markdownDescription": "Allow window dragging from custom titlebar"
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",
