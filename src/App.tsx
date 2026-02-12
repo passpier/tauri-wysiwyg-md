@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
@@ -11,14 +12,17 @@ import { ThemeSelector } from '@/components/ThemeSelector';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { usePlatformInitialization } from '@/hooks/usePlatformInitialization';
+import { getPrimaryLanguageCode } from '@/i18n/languageUtils';
 import {
   FileText,
   PanelLeft,
 } from 'lucide-react';
 
 function App() {
+  const { t, i18n } = useTranslation();
   const documents = useDocumentStore((state) => state.documents);
   const activeDocumentId = useDocumentStore((state) => state.activeDocumentId);
   const saveDocument = useDocumentStore((state) => state.saveDocument);
@@ -33,6 +37,7 @@ function App() {
   const editorMode = useUIStore((state) => state.editorMode);
   const toggleEditorMode = useUIStore((state) => state.toggleEditorMode);
   const osPlatform = useUIStore((state) => state.osPlatform);
+  const language = useSettingsStore((state) => state.language);
   const hasInitializedDocument = useRef(false);
   const editor = useEditorStore((state) => state.editor);
   const menuUnlistenersRef = useRef<Array<() => void>>([]);
@@ -50,6 +55,18 @@ function App() {
   useEffect(() => {
     initializeTheme();
   }, [initializeTheme]);
+
+  // Sync language with i18n and Rust backend
+  // Ensures consistent language code format (always 'en' or 'zh', never 'en-US', 'zh-TW', etc.)
+  // Note: Native menu language is handled directly in Rust event handler
+  useEffect(() => {
+    if (language) {
+      const normalizedLang = getPrimaryLanguageCode(language);
+      void i18n.changeLanguage(normalizedLang);
+      // Sync with backend state
+      void invoke('set_language', { lang: normalizedLang });
+    }
+  }, [language, i18n]);
 
   // Sync editor mode to native menu
   useEffect(() => {
@@ -111,14 +128,14 @@ function App() {
 
 
   const getDocumentTitle = () => {
-    if (!activeDocument) return 'Markdown Editor';
+    if (!activeDocument) return t('common.markdown_editor');
 
     const fileName = activeDocument.path
-      ? activeDocument.path.split('/').pop() ?? 'Untitled'
-      : 'Untitled';
-    const editedSuffix = activeDocument.isDirty ? ' • Edited' : '';
+      ? activeDocument.path.split('/').pop() ?? t('common.untitled')
+      : t('common.untitled');
+    const editedSuffix = activeDocument.isDirty ? ` • ${t('common.edited')}` : '';
 
-    return `${fileName}${editedSuffix} - Markdown Editor`;
+    return `${fileName}${editedSuffix} - ${t('common.markdown_editor')}`;
   };
 
   useEffect(() => {
@@ -172,10 +189,10 @@ function App() {
   }, []);
 
   const documentTitle = (() => {
-    if (!activeDocument) return 'Markdown Editor';
+    if (!activeDocument) return t('common.markdown_editor');
     return activeDocument.path
-      ? activeDocument.path.split('/').pop() ?? 'Untitled'
-      : 'Untitled';
+      ? activeDocument.path.split('/').pop() ?? t('common.untitled')
+      : t('common.untitled');
   })();
 
   // Ensure a blank document exists for first launch
@@ -336,6 +353,12 @@ function App() {
             const setCurrentTheme = useUIStore.getState().setCurrentTheme;
             setCurrentTheme(themeName);
           }),
+          listen<string>('language-changed', (event) => {
+            console.log('📢 Backend notified of language change:', event.payload);
+            const updateSettings = useSettingsStore.getState().updateSettings;
+            updateSettings({ language: event.payload });
+            console.log('✅ Frontend store updated to:', event.payload);
+          }),
           listen<{ command: string; level?: number }>(
             'menu-editor-command',
             (event) => {
@@ -416,7 +439,7 @@ function App() {
             >
               <span className="truncate">{documentTitle}</span>
               {activeDocument?.isDirty && (
-                <span className="text-xs font-semibold text-amber-500">Edited</span>
+                <span className="text-xs font-semibold text-amber-500">{t('common.edited')}</span>
               )}
             </div>
             <ThemeSelector />
@@ -462,9 +485,9 @@ function App() {
             <div className="flex-1 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <FileText className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                <p className="text-lg">No document open</p>
+                <p className="text-lg">{t('common.no_document_open')}</p>
                 <p className="text-sm mt-2">
-                  Create a new document or open an existing one
+                  {t('common.create_or_open')}
                 </p>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorLayout } from '@/hooks/useEditorLayout';
@@ -8,6 +9,7 @@ interface SourceEditorProps {
 }
 
 export const SourceEditor = ({ documentId }: SourceEditorProps) => {
+  const { t } = useTranslation();
   const documents = useDocumentStore((state) => state.documents);
   const updateContent = useDocumentStore((state) => state.updateContent);
   const fontSize = useUIStore((state) => state.fontSize);
@@ -31,7 +33,7 @@ export const SourceEditor = ({ documentId }: SourceEditorProps) => {
   if (!document) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
-        No document selected
+        {t('common.no_document_open')}
       </div>
     );
   }
@@ -51,7 +53,7 @@ export const SourceEditor = ({ documentId }: SourceEditorProps) => {
         }}
         onChange={handleChange}
         spellCheck={false}
-        placeholder="Type your markdown here..."
+        placeholder={t('editor.placeholder')}
       />
     </div>
   );

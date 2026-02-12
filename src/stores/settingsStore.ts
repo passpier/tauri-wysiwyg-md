@@ -7,6 +7,7 @@ interface SettingsState {
   spellCheck: boolean;
   wordWrap: boolean;
   showLineNumbers: boolean;
+  language: string;
   // Actions
   updateSettings: (settings: Partial<Omit<SettingsState, 'updateSettings'>>) => void;
   setAutoSave: (enabled: boolean) => void;
@@ -21,6 +22,7 @@ export const useSettingsStore = create<SettingsState>()(
       spellCheck: true,
       wordWrap: true,
       showLineNumbers: false,
+      language: 'en',
 
       updateSettings: (settings) => set((state) => ({ ...state, ...settings })),
 

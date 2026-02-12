@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, Moon, Sun } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { THEME_NAMES, ThemeName } from '@/theme/types';
@@ -6,6 +7,7 @@ import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
 export function ThemeSelector() {
+  const { t } = useTranslation();
   const currentTheme = useUIStore((state) => state.currentTheme);
   const setCurrentTheme = useUIStore((state) => state.setCurrentTheme);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,8 +47,8 @@ export function ThemeSelector() {
       size="sm"
       className="gap-2 h-9 titlebar-no-drag"
       onKeyDown={handleKeyDown}
-      aria-label="Select theme"
-      title={`Current theme: ${currentThemeData.displayName}`}
+      aria-label={t('themes.select_theme')}
+      title={t('themes.current_theme', { name: t(`themes.${currentTheme}`) })}
     >
       {themeIcon}
       <ChevronDown className="h-3 w-3 opacity-50" />
@@ -57,7 +59,7 @@ export function ThemeSelector() {
     <DropdownMenu trigger={triggerButton}>
       <div className="py-2">
         <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Light Themes
+          {t('themes.light_themes')}
         </div>
 
         {lightThemes.map(([name, theme]) => (
@@ -67,7 +69,7 @@ export function ThemeSelector() {
             className={`${currentTheme === name ? 'bg-accent' : ''}`}
           >
             <Sun className="h-3 w-3 mr-2 opacity-50" />
-            <span className="flex-1">{theme.displayName}</span>
+            <span className="flex-1">{t(`themes.${name}`)}</span>
             {currentTheme === name && (
               <span className="text-xs font-semibold">✓</span>
             )}
@@ -77,7 +79,7 @@ export function ThemeSelector() {
         <div className="my-1 h-px bg-border" />
 
         <div className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Dark Themes
+          {t('themes.dark_themes')}
         </div>
 
         {darkThemes.map(([name, theme]) => (
@@ -87,7 +89,7 @@ export function ThemeSelector() {
             className={`${currentTheme === name ? 'bg-accent' : ''}`}
           >
             <Moon className="h-3 w-3 mr-2 opacity-50" />
-            <span className="flex-1">{theme.displayName}</span>
+            <span className="flex-1">{t(`themes.${name}`)}</span>
             {currentTheme === name && (
               <span className="text-xs font-semibold">✓</span>
             )}

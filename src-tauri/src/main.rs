@@ -13,6 +13,94 @@ use tauri::{AppHandle, Emitter, Manager, State};
 struct AppState {
     recent_files: Mutex<VecDeque<String>>,
     pending_open_files: Mutex<VecDeque<String>>,
+    language: Mutex<String>,
+}
+
+impl AppState {
+    fn new(language: String) -> Self {
+        AppState {
+            recent_files: Mutex::new(VecDeque::new()),
+            pending_open_files: Mutex::new(VecDeque::new()),
+            language: Mutex::new(language),
+        }
+    }
+}
+
+fn get_label(lang: &str, key: &str) -> String {
+    match lang {
+        "zh" => match key {
+            "file" => "檔案".to_string(),
+            "file_new" => "新檔案".to_string(),
+            "file_open" => "開啟...".to_string(),
+            "file_save" => "儲存".to_string(),
+            "file_save_as" => "另存新檔...".to_string(),
+            "file_close_document" => "關閉文件".to_string(),
+            "format" => "格式".to_string(),
+            "format_text" => "文字".to_string(),
+            "format_bold" => "粗體".to_string(),
+            "format_italic" => "斜體".to_string(),
+            "format_strike" => "刪除線".to_string(),
+            "format_inline_code" => "行內程式碼".to_string(),
+            "format_headings" => "標題".to_string(),
+            "format_paragraph" => "本文".to_string(),
+            "format_heading_1" => "標題 1".to_string(),
+            "format_heading_2" => "標題 2".to_string(),
+            "format_heading_3" => "標題 3".to_string(),
+            "format_heading_4" => "標題 4".to_string(),
+            "format_heading_5" => "標題 5".to_string(),
+            "format_heading_6" => "標題 6".to_string(),
+            "format_lists" => "清單".to_string(),
+            "format_bullet_list" => "項目符號清單".to_string(),
+            "format_ordered_list" => "編號清單".to_string(),
+            "format_blocks" => "區塊".to_string(),
+            "format_blockquote" => "引用".to_string(),
+            "format_code_block" => "程式碼區塊".to_string(),
+            "format_horizontal_rule" => "水平分割線".to_string(),
+            "view" => "檢視".to_string(),
+            "view_source_code" => "原始碼".to_string(),
+            "view_theme" => "佈景主題".to_string(),
+            "view_language" => "語言".to_string(),
+            "lang_en" => "English".to_string(),
+            "lang_zh" => "繁體中文".to_string(),
+            _ => key.to_string(),
+        },
+        _ => match key {
+            "file" => "File".to_string(),
+            "file_new" => "New File".to_string(),
+            "file_open" => "Open...".to_string(),
+            "file_save" => "Save".to_string(),
+            "file_save_as" => "Save As...".to_string(),
+            "file_close_document" => "Close Document".to_string(),
+            "format" => "Format".to_string(),
+            "format_text" => "Text".to_string(),
+            "format_bold" => "Bold".to_string(),
+            "format_italic" => "Italic".to_string(),
+            "format_strike" => "Strikethrough".to_string(),
+            "format_inline_code" => "Inline Code".to_string(),
+            "format_headings" => "Headings".to_string(),
+            "format_paragraph" => "Paragraph".to_string(),
+            "format_heading_1" => "Heading 1".to_string(),
+            "format_heading_2" => "Heading 2".to_string(),
+            "format_heading_3" => "Heading 3".to_string(),
+            "format_heading_4" => "Heading 4".to_string(),
+            "format_heading_5" => "Heading 5".to_string(),
+            "format_heading_6" => "Heading 6".to_string(),
+            "format_lists" => "Lists".to_string(),
+            "format_bullet_list" => "Bullet List".to_string(),
+            "format_ordered_list" => "Ordered List".to_string(),
+            "format_blocks" => "Blocks".to_string(),
+            "format_blockquote" => "Blockquote".to_string(),
+            "format_code_block" => "Code Block".to_string(),
+            "format_horizontal_rule" => "Horizontal Rule".to_string(),
+            "view" => "View".to_string(),
+            "view_source_code" => "Source Code".to_string(),
+            "view_theme" => "Theme".to_string(),
+            "view_language" => "Language".to_string(),
+            "lang_en" => "English".to_string(),
+            "lang_zh" => "繁體中文".to_string(),
+            _ => key.to_string(),
+        },
+    }
 }
 
 // File entry for directory listing
@@ -147,6 +235,62 @@ fn file_exists(path: String) -> bool {
     PathBuf::from(path).exists()
 }
 
+/**
+ * Normalize language code to supported format ('en' or 'zh')
+ */
+fn normalize_language(lang: &str) -> String {
+    match lang.to_lowercase().split('-').next().unwrap_or("en") {
+        "zh" => "zh".to_string(),
+        _ => "en".to_string(),
+    }
+}
+
+/**
+ * Get system locale using backend detection (Tauri v2 best practice)
+ * Detects locale at Rust level for better performance and reliability
+ */
+#[tauri::command]
+fn get_system_locale() -> Result<String, String> {
+    match tauri_plugin_os::locale() {
+        Some(locale_str) => {
+            let normalized = normalize_language(&locale_str);
+            println!("🌍 System locale detected: {} → normalized to: {}", 
+                     locale_str, normalized);
+            Ok(normalized)
+        }
+        None => {
+            println!("⚠️ System locale not available, using default: English");
+            Ok("en".to_string())
+        }
+    }
+}
+
+/**
+ * Get the current language setting
+ */
+#[tauri::command]
+fn get_language(state: State<AppState>) -> Result<String, String> {
+    let lang = state.language.lock()
+        .map_err(|_| "Failed to lock language state".to_string())?;
+    Ok(lang.clone())
+}
+
+/**
+ * Set language (typically called from frontend after user changes preference)
+ * This updates the state but NOT the menu (menu is handled in event handler)
+ */
+#[tauri::command]
+fn set_language(state: State<AppState>, lang: String) -> Result<(), String> {
+    let normalized_lang = normalize_language(&lang);
+    
+    let mut l = state.language.lock()
+        .map_err(|_| "Failed to lock language state".to_string())?;
+    *l = normalized_lang.clone();
+    
+    println!("💾 Language state updated to: {}", normalized_lang);
+    Ok(())
+}
+
 // Update check menu item state
 #[tauri::command]
 fn update_menu_item_state(app: AppHandle, id: String, checked: bool) -> Result<(), String> {
@@ -264,7 +408,339 @@ fn queue_open_files(app: &AppHandle, paths: Vec<String>) {
     }
 }
 
+fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> tauri::Result<Menu<R>> {
+    let menu = Menu::default(handle)?;
+    
+    let new_item = MenuItem::with_id(
+        handle,
+        "file_new",
+        get_label(lang, "file_new"),
+        true,
+        Some("CmdOrCtrl+N"),
+    )?;
+    let open_item = MenuItem::with_id(
+        handle,
+        "file_open",
+        get_label(lang, "file_open"),
+        true,
+        Some("CmdOrCtrl+O"),
+    )?;
+    let save_item = MenuItem::with_id(
+        handle,
+        "file_save",
+        get_label(lang, "file_save"),
+        true,
+        Some("CmdOrCtrl+S"),
+    )?;
+    let save_as_item = MenuItem::with_id(
+        handle,
+        "file_save_as",
+        get_label(lang, "file_save_as"),
+        true,
+        Some("CmdOrCtrl+Shift+S"),
+    )?;
+    let close_document_item = MenuItem::with_id(
+        handle,
+        "file_close_document",
+        get_label(lang, "file_close_document"),
+        true,
+        Some("CmdOrCtrl+W"),
+    )?;
+    let file_separator = PredefinedMenuItem::separator(handle)?;
+
+    let mut file_menu_found = false;
+    for item in menu.items()? {
+        if let Some(submenu) = item.as_submenu() {
+            if submenu.text()? == "File" || submenu.text()? == "檔案" {
+                submenu.set_text(get_label(lang, "file"))?;
+                submenu.prepend_items(&[
+                    &new_item,
+                    &open_item,
+                    &save_item,
+                    &save_as_item,
+                    &close_document_item,
+                    &file_separator,
+                ])?;
+                file_menu_found = true;
+                break;
+            }
+        }
+    }
+
+    if !file_menu_found {
+        let file_menu = Submenu::with_items(
+            handle,
+            get_label(lang, "file"),
+            true,
+            &[
+                &new_item,
+                &open_item,
+                &file_separator,
+                &save_item,
+                &save_as_item,
+                &close_document_item,
+                &PredefinedMenuItem::close_window(handle, Some("CmdOrCtrl+Shift+W"))?,
+            ],
+        )?;
+        menu.append(&file_menu)?;
+    }
+
+    let bold_item = MenuItem::with_id(
+        handle,
+        "editor_bold",
+        get_label(lang, "format_bold"),
+        true,
+        Some("CmdOrCtrl+B"),
+    )?;
+    let italic_item = MenuItem::with_id(
+        handle,
+        "editor_italic",
+        get_label(lang, "format_italic"),
+        true,
+        Some("CmdOrCtrl+I"),
+    )?;
+    let strike_item = MenuItem::with_id(
+        handle,
+        "editor_strike",
+        get_label(lang, "format_strike"),
+        true,
+        Some("CmdOrCtrl+Shift+X"),
+    )?;
+    let inline_code_item = MenuItem::with_id(
+        handle,
+        "editor_inline_code",
+        get_label(lang, "format_inline_code"),
+        true,
+        Some("CmdOrCtrl+Shift+C"),
+    )?;
+    let paragraph_item = MenuItem::with_id(
+        handle,
+        "editor_paragraph",
+        get_label(lang, "format_paragraph"),
+        true,
+        None::<&str>,
+    )?;
+    let heading_1_item = MenuItem::with_id(
+        handle,
+        "editor_heading_1",
+        get_label(lang, "format_heading_1"),
+        true,
+        Some("CmdOrCtrl+Option+1"),
+    )?;
+    let heading_2_item = MenuItem::with_id(
+        handle,
+        "editor_heading_2",
+        get_label(lang, "format_heading_2"),
+        true,
+        Some("CmdOrCtrl+Option+2"),
+    )?;
+    let heading_3_item = MenuItem::with_id(
+        handle,
+        "editor_heading_3",
+        get_label(lang, "format_heading_3"),
+        true,
+        Some("CmdOrCtrl+Option+3"),
+    )?;
+    let heading_4_item = MenuItem::with_id(
+        handle,
+        "editor_heading_4",
+        get_label(lang, "format_heading_4"),
+        true,
+        Some("CmdOrCtrl+Option+4"),
+    )?;
+    let heading_5_item = MenuItem::with_id(
+        handle,
+        "editor_heading_5",
+        get_label(lang, "format_heading_5"),
+        true,
+        Some("CmdOrCtrl+Option+5"),
+    )?;
+    let heading_6_item = MenuItem::with_id(
+        handle,
+        "editor_heading_6",
+        get_label(lang, "format_heading_6"),
+        true,
+        Some("CmdOrCtrl+Option+6"),
+    )?;
+    let bullet_list_item = MenuItem::with_id(
+        handle,
+        "editor_bullet_list",
+        get_label(lang, "format_bullet_list"),
+        true,
+        Some("CmdOrCtrl+Shift+8"),
+    )?;
+    let ordered_list_item = MenuItem::with_id(
+        handle,
+        "editor_ordered_list",
+        get_label(lang, "format_ordered_list"),
+        true,
+        Some("CmdOrCtrl+Shift+7"),
+    )?;
+    let blockquote_item = MenuItem::with_id(
+        handle,
+        "editor_blockquote",
+        get_label(lang, "format_blockquote"),
+        true,
+        None::<&str>,
+    )?;
+    let code_block_item = MenuItem::with_id(
+        handle,
+        "editor_code_block",
+        get_label(lang, "format_code_block"),
+        true,
+        None::<&str>,
+    )?;
+    let horizontal_rule_item = MenuItem::with_id(
+        handle,
+        "editor_horizontal_rule",
+        get_label(lang, "format_horizontal_rule"),
+        true,
+        None::<&str>,
+    )?;
+
+    let text_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "format_text"),
+        true,
+        &[
+            &bold_item,
+            &italic_item,
+            &strike_item,
+            &inline_code_item,
+        ],
+    )?;
+    let heading_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "format_headings"),
+        true,
+        &[
+            &paragraph_item,
+            &heading_1_item,
+            &heading_2_item,
+            &heading_3_item,
+            &heading_4_item,
+            &heading_5_item,
+            &heading_6_item,
+        ],
+    )?;
+    let list_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "format_lists"),
+        true,
+        &[&bullet_list_item, &ordered_list_item],
+    )?;
+    let block_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "format_blocks"),
+        true,
+        &[&blockquote_item, &code_block_item, &horizontal_rule_item],
+    )?;
+    let format_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "format"),
+        true,
+        &[&text_menu, &heading_menu, &list_menu, &block_menu],
+    )?;
+    menu.append(&format_menu)?;
+    
+    // Create theme submenu items
+    let theme_github_light = MenuItem::with_id(handle, "view_theme_github_light", "GitHub Light", true, None::<&str>)?;
+    let theme_github_dark = MenuItem::with_id(handle, "view_theme_github_dark", "GitHub Dark", true, None::<&str>)?;
+    let theme_dracula = MenuItem::with_id(handle, "view_theme_dracula", "Dracula", true, None::<&str>)?;
+    let theme_nord_light = MenuItem::with_id(handle, "view_theme_nord_light", "Nord Light", true, None::<&str>)?;
+    let theme_nord_dark = MenuItem::with_id(handle, "view_theme_nord_dark", "Nord Dark", true, None::<&str>)?;
+    let theme_solarized_light = MenuItem::with_id(handle, "view_theme_solarized_light", "Solarized Light", true, None::<&str>)?;
+    let theme_solarized_dark = MenuItem::with_id(handle, "view_theme_solarized_dark", "Solarized Dark", true, None::<&str>)?;
+    
+    let theme_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "view_theme"),
+        true,
+        &[
+            &theme_github_light,
+            &theme_github_dark,
+            &theme_dracula,
+            &theme_nord_light,
+            &theme_nord_dark,
+            &theme_solarized_light,
+            &theme_solarized_dark,
+        ],
+    )?;
+
+    // Create language submenu
+    let lang_en_item = CheckMenuItem::with_id(
+        handle,
+        "lang_en",
+        get_label(lang, "lang_en"),
+        true,
+        lang == "en",
+        None::<&str>,
+    )?;
+    let lang_zh_item = CheckMenuItem::with_id(
+        handle,
+        "lang_zh",
+        get_label(lang, "lang_zh"),
+        true,
+        lang == "zh",
+        None::<&str>,
+    )?;
+    
+    let language_menu = Submenu::with_items(
+        handle,
+        get_label(lang, "view_language"),
+        true,
+        &[&lang_en_item, &lang_zh_item],
+    )?;
+
+    let source_code_item = CheckMenuItem::with_id(
+        handle,
+        "view_source_code",
+        get_label(lang, "view_source_code"),
+        true,
+        false,
+        Some("CmdOrCtrl+Alt+S"),
+    )?;
+    
+    let view_separator = PredefinedMenuItem::separator(handle)?;
+    let mut view_menu_found = false;
+    for item in menu.items()? {
+        if let Some(submenu) = item.as_submenu() {
+            if submenu.text()? == "View" || submenu.text()? == "檢視" {
+                submenu.set_text(get_label(lang, "view"))?;
+                submenu.prepend_items(&[
+                    &source_code_item,
+                    &view_separator,
+                    &theme_menu,
+                    &language_menu,
+                    &view_separator,
+                ])?;
+                view_menu_found = true;
+                break;
+            }
+        }
+    }
+    if !view_menu_found {
+        let view_menu = Submenu::with_items(
+            handle,
+            get_label(lang, "view"),
+            true,
+            &[
+                &source_code_item,
+                &view_separator,
+                &theme_menu,
+                &language_menu,
+            ],
+        )?;
+        menu.append(&view_menu)?;
+    }
+
+    Ok(menu)
+}
+
 fn main() {
+    // Initialize default language (will be overridden by frontend once it loads settings)
+    let default_language = "en".to_string();
+    
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_fs::init())
@@ -273,358 +749,19 @@ fn main() {
             let paths = collect_open_paths(argv);
             queue_open_files(app, paths);
         }))
-        .manage(AppState {
-            recent_files: Mutex::new(VecDeque::new()),
-            pending_open_files: Mutex::new(VecDeque::new()),
-        })
+        .manage(AppState::new(default_language.clone()))
         .setup(|app| {
             let args = std::env::args().skip(1).collect::<Vec<_>>();
             let paths = collect_open_paths(args);
             queue_open_files(&app.handle(), paths);
             Ok(())
         })
-        .menu(|handle| {
-            // ... (rest of menu code remains the same)
-            let menu = Menu::default(handle)?;
-            let new_item = MenuItem::with_id(
-                handle,
-                "file_new",
-                "New File",
-                true,
-                Some("CmdOrCtrl+N"),
-            )?;
-            let open_item = MenuItem::with_id(
-                handle,
-                "file_open",
-                "Open...",
-                true,
-                Some("CmdOrCtrl+O"),
-            )?;
-            let save_item = MenuItem::with_id(
-                handle,
-                "file_save",
-                "Save",
-                true,
-                Some("CmdOrCtrl+S"),
-            )?;
-            let save_as_item = MenuItem::with_id(
-                handle,
-                "file_save_as",
-                "Save As...",
-                true,
-                Some("CmdOrCtrl+Shift+S"),
-            )?;
-            let close_document_item = MenuItem::with_id(
-                handle,
-                "file_close_document",
-                "Close Document",
-                true,
-                Some("CmdOrCtrl+W"),
-            )?;
-            let file_separator = PredefinedMenuItem::separator(handle)?;
-
-            let mut file_menu_found = false;
-            for item in menu.items()? {
-                if let Some(submenu) = item.as_submenu() {
-                    if submenu.text()? == "File" {
-                        submenu.prepend_items(&[
-                            &new_item,
-                            &open_item,
-                            &save_item,
-                            &save_as_item,
-                            &close_document_item,
-                            &file_separator,
-                        ])?;
-                        file_menu_found = true;
-                        break;
-                    }
-                }
-            }
-
-            if !file_menu_found {
-                let file_menu = Submenu::with_items(
-                    handle,
-                    "File",
-                    true,
-                    &[
-                        &new_item,
-                        &open_item,
-                        &file_separator,
-                        &save_item,
-                        &save_as_item,
-                        &close_document_item,
-                        &PredefinedMenuItem::close_window(handle, Some("CmdOrCtrl+Shift+W"))?,
-                    ],
-                )?;
-                menu.append(&file_menu)?;
-            }
-
-            let bold_item = MenuItem::with_id(
-                handle,
-                "editor_bold",
-                "Bold",
-                true,
-                Some("CmdOrCtrl+B"),
-            )?;
-            let italic_item = MenuItem::with_id(
-                handle,
-                "editor_italic",
-                "Italic",
-                true,
-                Some("CmdOrCtrl+I"),
-            )?;
-            let strike_item = MenuItem::with_id(
-                handle,
-                "editor_strike",
-                "Strikethrough",
-                true,
-                Some("CmdOrCtrl+Shift+X"),
-            )?;
-            let inline_code_item = MenuItem::with_id(
-                handle,
-                "editor_inline_code",
-                "Inline Code",
-                true,
-                Some("CmdOrCtrl+Shift+C"),
-            )?;
-            let paragraph_item = MenuItem::with_id(
-                handle,
-                "editor_paragraph",
-                "Paragraph",
-                true,
-                None::<&str>,
-            )?;
-            let heading_1_item = MenuItem::with_id(
-                handle,
-                "editor_heading_1",
-                "Heading 1",
-                true,
-                Some("CmdOrCtrl+Option+1"),
-            )?;
-            let heading_2_item = MenuItem::with_id(
-                handle,
-                "editor_heading_2",
-                "Heading 2",
-                true,
-                Some("CmdOrCtrl+Option+2"),
-            )?;
-            let heading_3_item = MenuItem::with_id(
-                handle,
-                "editor_heading_3",
-                "Heading 3",
-                true,
-                Some("CmdOrCtrl+Option+3"),
-            )?;
-            let heading_4_item = MenuItem::with_id(
-                handle,
-                "editor_heading_4",
-                "Heading 4",
-                true,
-                Some("CmdOrCtrl+Option+4"),
-            )?;
-            let heading_5_item = MenuItem::with_id(
-                handle,
-                "editor_heading_5",
-                "Heading 5",
-                true,
-                Some("CmdOrCtrl+Option+5"),
-            )?;
-            let heading_6_item = MenuItem::with_id(
-                handle,
-                "editor_heading_6",
-                "Heading 6",
-                true,
-                Some("CmdOrCtrl+Option+6"),
-            )?;
-            let bullet_list_item = MenuItem::with_id(
-                handle,
-                "editor_bullet_list",
-                "Bullet List",
-                true,
-                Some("CmdOrCtrl+Shift+8"),
-            )?;
-            let ordered_list_item = MenuItem::with_id(
-                handle,
-                "editor_ordered_list",
-                "Ordered List",
-                true,
-                Some("CmdOrCtrl+Shift+7"),
-            )?;
-            let blockquote_item = MenuItem::with_id(
-                handle,
-                "editor_blockquote",
-                "Blockquote",
-                true,
-                None::<&str>,
-            )?;
-            let code_block_item = MenuItem::with_id(
-                handle,
-                "editor_code_block",
-                "Code Block",
-                true,
-                None::<&str>,
-            )?;
-            let horizontal_rule_item = MenuItem::with_id(
-                handle,
-                "editor_horizontal_rule",
-                "Horizontal Rule",
-                true,
-                None::<&str>,
-            )?;
-
-            let text_menu = Submenu::with_items(
-                handle,
-                "Text",
-                true,
-                &[
-                    &bold_item,
-                    &italic_item,
-                    &strike_item,
-                    &inline_code_item,
-                ],
-            )?;
-            let heading_menu = Submenu::with_items(
-                handle,
-                "Headings",
-                true,
-                &[
-                    &paragraph_item,
-                    &heading_1_item,
-                    &heading_2_item,
-                    &heading_3_item,
-                    &heading_4_item,
-                    &heading_5_item,
-                    &heading_6_item,
-                ],
-            )?;
-            let list_menu = Submenu::with_items(
-                handle,
-                "Lists",
-                true,
-                &[&bullet_list_item, &ordered_list_item],
-            )?;
-            let block_menu = Submenu::with_items(
-                handle,
-                "Blocks",
-                true,
-                &[&blockquote_item, &code_block_item, &horizontal_rule_item],
-            )?;
-            let format_menu = Submenu::with_items(
-                handle,
-                "Format",
-                true,
-                &[&text_menu, &heading_menu, &list_menu, &block_menu],
-            )?;
-            menu.append(&format_menu)?;
-            
-            // Create theme submenu items
-            let theme_github_light = MenuItem::with_id(
-                handle,
-                "view_theme_github_light",
-                "GitHub Light",
-                true,
-                None::<&str>,
-            )?;
-            let theme_github_dark = MenuItem::with_id(
-                handle,
-                "view_theme_github_dark",
-                "GitHub Dark",
-                true,
-                None::<&str>,
-            )?;
-            let theme_dracula = MenuItem::with_id(
-                handle,
-                "view_theme_dracula",
-                "Dracula",
-                true,
-                None::<&str>,
-            )?;
-            let theme_nord_light = MenuItem::with_id(
-                handle,
-                "view_theme_nord_light",
-                "Nord Light",
-                true,
-                None::<&str>,
-            )?;
-            let theme_nord_dark = MenuItem::with_id(
-                handle,
-                "view_theme_nord_dark",
-                "Nord Dark",
-                true,
-                None::<&str>,
-            )?;
-            let theme_solarized_light = MenuItem::with_id(
-                handle,
-                "view_theme_solarized_light",
-                "Solarized Light",
-                true,
-                None::<&str>,
-            )?;
-            let theme_solarized_dark = MenuItem::with_id(
-                handle,
-                "view_theme_solarized_dark",
-                "Solarized Dark",
-                true,
-                None::<&str>,
-            )?;
-            
-            let theme_menu = Submenu::with_items(
-                handle,
-                "Theme",
-                true,
-                &[
-                    &theme_github_light,
-                    &theme_github_dark,
-                    &theme_dracula,
-                    &theme_nord_light,
-                    &theme_nord_dark,
-                    &theme_solarized_light,
-                    &theme_solarized_dark,
-                ],
-            )?;
-
-            let source_code_item = CheckMenuItem::with_id(
-                handle,
-                "view_source_code",
-                "Source Code",
-                true,
-                false,
-                Some("CmdOrCtrl+Alt+S"),
-            )?;
-            
-            let view_separator = PredefinedMenuItem::separator(handle)?;
-            let mut view_menu_found = false;
-            for item in menu.items()? {
-                if let Some(submenu) = item.as_submenu() {
-                    if submenu.text()? == "View" {
-                        submenu.prepend_items(&[
-                            &source_code_item,
-                            &view_separator,
-                            &theme_menu,
-                            &view_separator,
-                        ])?;
-                        view_menu_found = true;
-                        break;
-                    }
-                }
-            }
-            if !view_menu_found {
-                let view_menu = Submenu::with_items(
-                    handle,
-                    "View",
-                    true,
-                    &[
-                        &source_code_item,
-                        &view_separator,
-                        &theme_menu,
-                    ],
-                )?;
-                menu.append(&view_menu)?;
-            }
-
-            Ok(menu)
+        .menu(move |handle| {
+            // Menu starts with default language, will be updated when frontend loads
+            create_app_menu(handle, &default_language)
         })
         .on_menu_event(|app, event| {
+            // ... (rest of menu event handler remains the same)
             if event.id() == "file_new" {
                 let _ = app.emit("menu-new-file", ());
             } else if event.id() == "file_open" {
@@ -651,6 +788,32 @@ fn main() {
                 let _ = app.emit("menu-set-theme", "solarized-light");
             } else if event.id() == "view_theme_solarized_dark" {
                 let _ = app.emit("menu-set-theme", "solarized-dark");
+            } else if event.id() == "lang_en" {
+                println!("🌐 User selected: English");
+                // Update menu directly
+                if let Ok(menu) = create_app_menu(&app, "en") {
+                    let _ = app.set_menu(menu);
+                }
+                // Update backend state
+                if let Ok(mut lang) = app.state::<AppState>().language.lock() {
+                    *lang = "en".to_string();
+                }
+                // Notify frontend about the language change
+                let _ = app.emit("language-changed", "en");
+                println!("✅ Language changed to: English");
+            } else if event.id() == "lang_zh" {
+                println!("🌐 User selected: Chinese");
+                // Update menu directly
+                if let Ok(menu) = create_app_menu(&app, "zh") {
+                    let _ = app.set_menu(menu);
+                }
+                // Update backend state
+                if let Ok(mut lang) = app.state::<AppState>().language.lock() {
+                    *lang = "zh".to_string();
+                }
+                // Notify frontend about the language change
+                let _ = app.emit("language-changed", "zh");
+                println!("✅ Language changed to: Chinese");
             } else if event.id() == "editor_bold" {
                 emit_editor_command(app, "bold", None);
             } else if event.id() == "editor_italic" {
@@ -698,6 +861,9 @@ fn main() {
             update_menu_item_state,
             take_pending_open_files,
             get_os_platform,
+            get_system_locale,
+            get_language,
+            set_language,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

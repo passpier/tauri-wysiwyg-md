@@ -1,0 +1,66 @@
+{
+  "common": {
+    "untitled": "Untitled",
+    "edited": "Edited",
+    "loading": "Loading...",
+    "no_document_open": "No document open",
+    "create_or_open": "Create a new document or open an existing one",
+    "toggle_sidebar": "Toggle sidebar",
+    "markdown_editor": "Markdown Editor"
+  },
+  "sidebar": {
+    "open_folder": "Open Folder",
+    "new_file": "New File",
+    "recent_files": "RECENT FILES",
+    "no_files_found": "No markdown files found",
+    "open_folder_to_browse": "Open a folder to browse files"
+  },
+  "editor": {
+    "placeholder": "Type your markdown here..."
+  },
+  "toolbar": {
+    "normal": "Normal",
+    "heading": "Heading {{level}}",
+    "bold": "Bold",
+    "italic": "Italic",
+    "strikethrough": "Strikethrough",
+    "inline_code": "Inline Code",
+    "bullet_list": "Bullet List",
+    "ordered_list": "Ordered List",
+    "blockquote": "Blockquote",
+    "code_block": "Code Block",
+    "horizontal_rule": "Horizontal Rule",
+    "insert_table": "Insert Table",
+    "table_2x2": "2x2 Table",
+    "table_3x3": "3x3 Table",
+    "table_4x4": "4x4 Table",
+    "add_row": "Add Row",
+    "delete_row": "Delete Row",
+    "add_column": "Add Column",
+    "delete_column": "Delete Column"
+  },
+  "themes": {
+    "select_theme": "Select theme",
+    "current_theme": "Current theme: {{name}}",
+    "light_themes": "Light Themes",
+    "dark_themes": "Dark Themes",
+    "github-light": "GitHub Light",
+    "github-dark": "GitHub Dark",
+    "dracula": "Dracula",
+    "nord-light": "Nord Light",
+    "nord-dark": "Nord Dark",
+    "solarized-light": "Solarized Light",
+    "solarized-dark": "Solarized Dark"
+  },
+  "menu": {
+    "file": "File",
+    "new": "New File",
+    "open": "Open...",
+    "save": "Save",
+    "save_as": "Save As...",
+    "close": "Close Document",
+    "view": "View",
+    "theme": "Theme",
+    "source_code": "Source Code"
+  }
+}

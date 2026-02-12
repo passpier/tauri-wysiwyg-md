@@ -1,4 +1,5 @@
 import { memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +17,7 @@ interface FileEntry {
 }
 
 export const Sidebar = memo(function Sidebar() {
+  const { t } = useTranslation();
   const [currentDirectory, setCurrentDirectory] = useState<string | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -108,12 +110,13 @@ export const Sidebar = memo(function Sidebar() {
             className="flex-1"
           >
             <FolderOpen className="w-4 h-4 mr-2" />
-            Open Folder
+            {t('sidebar.open_folder')}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleNewFile}
+            title={t('sidebar.new_file')}
           >
             <FilePlus className="w-4 h-4" />
           </Button>
@@ -139,7 +142,7 @@ export const Sidebar = memo(function Sidebar() {
         <>
           <div className="p-3">
             <h3 className="text-xs font-semibold text-muted-foreground mb-2">
-              RECENT FILES
+              {t('sidebar.recent_files')}
             </h3>
             <div className="space-y-1">
               {recentFiles.slice(0, 5).map((path) => (
@@ -165,7 +168,7 @@ export const Sidebar = memo(function Sidebar() {
       {/* File List */}
       <ScrollArea className="flex-1 p-3">
         {loading ? (
-          <div className="text-sm text-muted-foreground">Loading...</div>
+          <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
         ) : currentDirectory ? (
           files.length > 0 ? (
             <div className="space-y-1">
@@ -180,12 +183,12 @@ export const Sidebar = memo(function Sidebar() {
             </div>
           ) : (
             <div className="text-sm text-muted-foreground">
-              No markdown files found
+              {t('sidebar.no_files_found')}
             </div>
           )
         ) : (
           <div className="text-sm text-muted-foreground text-center mt-8 truncate">
-            Open a folder to browse files
+            {t('sidebar.open_folder_to_browse')}
           </div>
         )}
       </ScrollArea>

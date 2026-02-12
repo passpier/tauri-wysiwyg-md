@@ -1,4 +1,5 @@
 import { Editor } from '@tiptap/react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -25,6 +26,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ editor }: ToolbarProps) {
+  const { t } = useTranslation();
   if (!editor) {
     return null;
   }
@@ -43,7 +45,7 @@ export function Toolbar({ editor }: ToolbarProps) {
                  editor.isActive('heading', { level: 4 }) ? 'H4' :
                  editor.isActive('heading', { level: 5 }) ? 'H5' :
                  editor.isActive('heading', { level: 6 }) ? 'H6' :
-                 'Normal'}
+                 t('toolbar.normal')}
               </span>
               <ChevronDown className="w-4 h-4 ml-1" />
             </Button>
@@ -52,14 +54,14 @@ export function Toolbar({ editor }: ToolbarProps) {
           <DropdownMenuItem
             onClick={() => editor.chain().focus().setParagraph().run()}
           >
-            Normal
+            {t('toolbar.normal')}
           </DropdownMenuItem>
           {[1, 2, 3, 4, 5, 6].map((level) => (
             <DropdownMenuItem
               key={level}
               onClick={() => editor.chain().focus().toggleHeading({ level: level as any }).run()}
             >
-              Heading {level}
+              {t('toolbar.heading', { level })}
             </DropdownMenuItem>
           ))}
         </DropdownMenu>
@@ -67,7 +69,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         {/* Text Formatting */}
-        <Tooltip content="Bold">
+        <Tooltip content={t('toolbar.bold')}>
           <Button
             variant="ghost"
             size="icon"
@@ -78,7 +80,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Italic">
+        <Tooltip content={t('toolbar.italic')}>
           <Button
             variant="ghost"
             size="icon"
@@ -89,7 +91,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Strikethrough">
+        <Tooltip content={t('toolbar.strikethrough')}>
           <Button
             variant="ghost"
             size="icon"
@@ -100,7 +102,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Inline Code">
+        <Tooltip content={t('toolbar.inline_code')}>
           <Button
             variant="ghost"
             size="icon"
@@ -114,7 +116,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         {/* Lists */}
-        <Tooltip content="Bullet List">
+        <Tooltip content={t('toolbar.bullet_list')}>
           <Button
             variant="ghost"
             size="icon"
@@ -125,7 +127,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Ordered List">
+        <Tooltip content={t('toolbar.ordered_list')}>
           <Button
             variant="ghost"
             size="icon"
@@ -139,7 +141,7 @@ export function Toolbar({ editor }: ToolbarProps) {
         <Separator orientation="vertical" className="h-6 mx-1" />
 
         {/* Block Elements */}
-        <Tooltip content="Blockquote">
+        <Tooltip content={t('toolbar.blockquote')}>
           <Button
             variant="ghost"
             size="icon"
@@ -150,7 +152,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Code Block">
+        <Tooltip content={t('toolbar.code_block')}>
           <Button
             variant="ghost"
             size="icon"
@@ -161,7 +163,7 @@ export function Toolbar({ editor }: ToolbarProps) {
           </Button>
         </Tooltip>
 
-        <Tooltip content="Horizontal Rule">
+        <Tooltip content={t('toolbar.horizontal_rule')}>
           <Button
             variant="ghost"
             size="icon"
@@ -180,6 +182,7 @@ export function Toolbar({ editor }: ToolbarProps) {
               variant="ghost" 
               size="icon"
               className={cn(editor.isActive('table') && 'bg-accent')}
+              title={t('toolbar.insert_table')}
             >
               <Table className="w-4 h-4" />
               <ChevronDown className="w-3 h-3 ml-0.5" />
@@ -189,41 +192,41 @@ export function Toolbar({ editor }: ToolbarProps) {
           <DropdownMenuItem
             onClick={() => insertTable(editor, { rows: 3, cols: 3 })}
           >
-            <span>Insert Table</span>
+            <span>{t('toolbar.insert_table')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => insertTable(editor, { rows: 2, cols: 2 })}
           >
-            <span>2x2 Table</span>
+            <span>{t('toolbar.table_2x2')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => insertTable(editor, { rows: 3, cols: 3 })}
           >
-            <span>3x3 Table</span>
+            <span>{t('toolbar.table_3x3')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => insertTable(editor, { rows: 4, cols: 4 })}
           >
-            <span>4x4 Table</span>
+            <span>{t('toolbar.table_4x4')}</span>
           </DropdownMenuItem>
           {editor.isActive('table') && (
             <>
               <Separator className="my-1" />
               <DropdownMenuItem onClick={() => insertRowBelow(editor)}>
                 <Plus className="w-4 h-4 mr-2" />
-                <span>Add Row</span>
+                <span>{t('toolbar.add_row')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => deleteRow(editor)}>
                 <Trash2 className="w-4 h-4 mr-2" />
-                <span>Delete Row</span>
+                <span>{t('toolbar.delete_row')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => insertColumnRight(editor)}>
                 <Plus className="w-4 h-4 mr-2" />
-                <span>Add Column</span>
+                <span>{t('toolbar.add_column')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => deleteColumn(editor)}>
                 <Trash2 className="w-4 h-4 mr-2" />
-                <span>Delete Column</span>
+                <span>{t('toolbar.delete_column')}</span>
               </DropdownMenuItem>
             </>
           )}
