@@ -8,10 +8,13 @@ import { useSettingsStore } from '@/stores/settingsStore';
  * Initializes the OS platform and language early.
  * This hook should be called at the very top of the App component.
  * 
- * Language initialization priority:
- * 1. localStorage (user saved preference)
- * 2. System OS locale
- * 3. Default to 'en'
+ * Language initialization priority (Tauri v2 best practice):
+ * 1. Backend persistent storage (user saved preference) - Most reliable
+ * 2. System OS locale - Fallback if no user preference
+ * 3. Default to 'en' - Last resort
+ * 
+ * Note: localStorage is only used for temporary UI state, not language preference.
+ * Language preference is stored persistently in backend config directory.
  */
 export function usePlatformInitialization() {
   const setOsPlatform = useUIStore((state) => state.setOsPlatform);
@@ -28,24 +31,36 @@ export function usePlatformInitialization() {
 
     const initApp = async () => {
       try {
-        // 1. Initialize language if not set (localStorage is empty)
-        // localStorage has priority, so only detect system locale if no saved preference
-        if (!language) {
+        // Language initialization priority:
+        // 1. Backend persistent storage (user saved preference)
+        // 2. System OS locale (if no user preference)
+        // 3. Default to 'en' (store default)
+        
+        try {
+          // Query backend for user settings (stored in config directory)
+          const userSettings = await invoke<{ language: string }>('get_user_settings');
+          if (isActive && userSettings?.language) {
+            console.log(`📂 User language preference loaded from backend: ${userSettings.language}`);
+            updateSettings({ language: userSettings.language });
+            // Don't return - still need to initialize platform below
+          }
+        } catch (settingsError) {
+          console.warn('Failed to load user settings from backend:', settingsError);
+          // Continue to fallback
           try {
-            // Query backend for system locale (Tauri v2 best practice)
             const systemLocale = await invoke<string>('get_system_locale');
             if (isActive && systemLocale) {
-              console.log(`🌍 System locale from backend: ${systemLocale}`);
+              console.log(`🌍 No user preference, using system locale: ${systemLocale}`);
               updateSettings({ language: systemLocale });
               console.log('✅ Language initialized from system locale');
             }
           } catch (localeError) {
             console.warn('Failed to get system locale from backend:', localeError);
-            // Language already has default value from settings store, no action needed
+            // Language already has default value from settings store
           }
         }
 
-        // 2. Immediately try to fetch platform from Rust command (fastest)
+        // Platform initialization
         invoke<string>('get_os_platform')
           .then((platform) => {
             if (!isActive) return;
@@ -58,7 +73,7 @@ export function usePlatformInitialization() {
           })
           .catch((err) => console.warn('Failed to invoke get_os_platform:', err));
 
-        // 3. Also listen for the event as a backup (in case of race wins)
+        // Also listen for the event as a backup (in case of race wins)
         unlistenInit = await listen<string>('init-platform', (event) => {
           if (!isActive) return;
           const detectedPlatform = event.payload as 'macos' | 'windows' | 'gnome' | 'unknown';

@@ -58,13 +58,20 @@ function App() {
 
   // Sync language with i18n and Rust backend
   // Ensures consistent language code format (always 'en' or 'zh', never 'en-US', 'zh-TW', etc.)
+  // Persists user language preference to backend storage
   // Note: Native menu language is handled directly in Rust event handler
   useEffect(() => {
     if (language) {
       const normalizedLang = getPrimaryLanguageCode(language);
       void i18n.changeLanguage(normalizedLang);
-      // Sync with backend state
-      void invoke('set_language', { lang: normalizedLang });
+      
+      // Sync with backend state AND save preference to persistent storage
+      Promise.all([
+        invoke('set_language', { lang: normalizedLang }),
+        invoke('save_language_preference', { lang: normalizedLang }),
+      ]).catch((err) => {
+        console.error('Failed to sync language to backend:', err);
+      });
     }
   }, [language, i18n]);
 

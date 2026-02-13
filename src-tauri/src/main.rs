@@ -26,6 +26,86 @@ impl AppState {
     }
 }
 
+// User settings - stored persistently in config directory
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct UserSettings {
+    language: String,
+}
+
+impl UserSettings {
+    /**
+     * Get the path to the settings file in the app's config directory
+     * Uses platform-specific config directories:
+     * - macOS: ~/Library/Application Support/tauri-wysiwyg-md
+     * - Windows: C:\Users\{User}\AppData\Local\tauri-wysiwyg-md
+     * - Linux: ~/.config/tauri-wysiwyg-md
+     */
+    fn config_path() -> Result<PathBuf, String> {
+        let config_dir = if cfg!(target_os = "macos") {
+            // macOS: ~/Library/Application Support
+            let home = std::env::var("HOME")
+                .map_err(|_| "Failed to get HOME directory".to_string())?;
+            PathBuf::from(home).join("Library/Application Support")
+        } else if cfg!(target_os = "windows") {
+            // Windows: %LOCALAPPDATA%
+            let local_app_data = std::env::var("LOCALAPPDATA")
+                .map_err(|_| "Failed to get LOCALAPPDATA directory".to_string())?;
+            PathBuf::from(local_app_data)
+        } else {
+            // Linux: ~/.config
+            let home = std::env::var("HOME")
+                .map_err(|_| "Failed to get HOME directory".to_string())?;
+            PathBuf::from(home).join(".config")
+        };
+        
+        let app_config_dir = config_dir.join("tauri-wysiwyg-md");
+        
+        // Create directory if it doesn't exist
+        fs::create_dir_all(&app_config_dir)
+            .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        
+        Ok(app_config_dir.join("settings.json"))
+    }
+
+    /**
+     * Load settings from file, or return defaults if file doesn't exist
+     */
+    fn load() -> Result<Self, String> {
+        let path = Self::config_path()?;
+        
+        if path.exists() {
+            let content = fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read settings file: {}", e))?;
+            
+            let settings: UserSettings = serde_json::from_str(&content)
+                .map_err(|e| format!("Failed to parse settings: {}", e))?;
+            
+            println!("📂 Settings loaded from: {}", path.display());
+            Ok(settings)
+        } else {
+            println!("📂 Settings file not found, using defaults");
+            Ok(UserSettings {
+                language: "en".to_string(),
+            })
+        }
+    }
+
+    /**
+     * Save settings to file
+     */
+    fn save(&self) -> Result<(), String> {
+        let path = Self::config_path()?;
+        let content = serde_json::to_string_pretty(self)
+            .map_err(|e| format!("Failed to serialize settings: {}", e))?;
+        
+        fs::write(&path, content)
+            .map_err(|e| format!("Failed to write settings file: {}", e))?;
+        
+        println!("💾 Settings saved to: {}", path.display());
+        Ok(())
+    }
+}
+
 fn get_label(lang: &str, key: &str) -> String {
     match lang {
         "zh" => match key {
@@ -60,6 +140,9 @@ fn get_label(lang: &str, key: &str) -> String {
             "view_source_code" => "原始碼".to_string(),
             "view_theme" => "佈景主題".to_string(),
             "view_language" => "語言".to_string(),
+            "edit" => "編輯".to_string(),
+            "window" => "視窗".to_string(),
+            "help" => "說明".to_string(),
             "lang_en" => "English".to_string(),
             "lang_zh" => "繁體中文".to_string(),
             _ => key.to_string(),
@@ -96,6 +179,9 @@ fn get_label(lang: &str, key: &str) -> String {
             "view_source_code" => "Source Code".to_string(),
             "view_theme" => "Theme".to_string(),
             "view_language" => "Language".to_string(),
+            "edit" => "Edit".to_string(),
+            "window" => "Window".to_string(),
+            "help" => "Help".to_string(),
             "lang_en" => "English".to_string(),
             "lang_zh" => "繁體中文".to_string(),
             _ => key.to_string(),
@@ -291,6 +377,44 @@ fn set_language(state: State<AppState>, lang: String) -> Result<(), String> {
     Ok(())
 }
 
+/**
+ * Get user settings (including language preference from persistent storage)
+ * Loads from config file or returns defaults
+ * Tauri v2 best practice: store settings in app config directory
+ */
+#[tauri::command]
+fn get_user_settings() -> Result<UserSettings, String> {
+    let settings = UserSettings::load()?;
+    println!("📂 User settings retrieved: language={}", settings.language);
+    Ok(settings)
+}
+
+/**
+ * Save user language preference to persistent storage
+ * This ensures language preference survives app restarts
+ */
+#[tauri::command]
+fn save_language_preference(lang: String, state: State<AppState>) -> Result<(), String> {
+    let normalized_lang = normalize_language(&lang);
+    
+    // Load existing settings (to preserve other settings if any)
+    let mut settings = UserSettings::load()?;
+    
+    // Update language
+    settings.language = normalized_lang.clone();
+    
+    // Save to file
+    settings.save()?;
+    
+    // Also update in-memory state
+    let mut l = state.language.lock()
+        .map_err(|_| "Failed to lock language state".to_string())?;
+    *l = normalized_lang.clone();
+    
+    println!("💾 Language preference saved and state updated to: {}", normalized_lang);
+    Ok(())
+}
+
 // Update check menu item state
 #[tauri::command]
 fn update_menu_item_state(app: AppHandle, id: String, checked: bool) -> Result<(), String> {
@@ -346,6 +470,16 @@ fn emit_editor_command(app: &tauri::AppHandle, command: &str, level: Option<u8>)
         level,
     };
     let _ = app.emit("menu-editor-command", payload);
+}
+
+/**
+ * Helper function to save language preference to persistent storage
+ * Used by menu event handlers
+ */
+fn save_language_to_storage(lang: &str) -> Result<(), String> {
+    let mut settings = UserSettings::load()?;
+    settings.language = lang.to_string();
+    settings.save()
 }
 
 fn normalize_open_path(arg: &str) -> Option<String> {
@@ -451,7 +585,8 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
     let mut file_menu_found = false;
     for item in menu.items()? {
         if let Some(submenu) = item.as_submenu() {
-            if submenu.text()? == "File" || submenu.text()? == "檔案" {
+            let text = submenu.text()?;
+            if text == "File" || text == "檔案" {
                 submenu.set_text(get_label(lang, "file"))?;
                 submenu.prepend_items(&[
                     &new_item,
@@ -462,7 +597,12 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
                     &file_separator,
                 ])?;
                 file_menu_found = true;
-                break;
+            } else if text == "Edit" || text == "編輯" {
+                submenu.set_text(get_label(lang, "edit"))?;
+            } else if text == "Window" || text == "視窗" {
+                submenu.set_text(get_label(lang, "window"))?;
+            } else if text == "Help" || text == "說明" {
+                submenu.set_text(get_label(lang, "help"))?;
             }
         }
     }
@@ -738,8 +878,33 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
 }
 
 fn main() {
-    // Initialize default language (will be overridden by frontend once it loads settings)
-    let default_language = "en".to_string();
+    // Language initialization priority (Tauri v2 best practice):
+    // 1. Load from persistent storage (user saved preference)
+    // 2. Fall back to system locale
+    // 3. Default to English
+    
+    let default_language = match UserSettings::load() {
+        Ok(settings) => {
+            println!("✅ User language preference loaded from storage: {}", settings.language);
+            settings.language
+        }
+        Err(e) => {
+            println!("⚠️ Failed to load user settings: {}", e);
+            // Fall back to system locale if file doesn't exist or fails
+            match tauri_plugin_os::locale() {
+                Some(locale_str) => {
+                    let normalized = normalize_language(&locale_str);
+                    println!("🌍 Falling back to system locale: {} → normalized to: {}", 
+                             locale_str, normalized);
+                    normalized
+                }
+                None => {
+                    println!("⚠️ System locale not available, using default: English");
+                    "en".to_string()
+                }
+            }
+        }
+    };
     
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
@@ -757,7 +922,7 @@ fn main() {
             Ok(())
         })
         .menu(move |handle| {
-            // Menu starts with default language, will be updated when frontend loads
+            // Menu starts with detected system language
             create_app_menu(handle, &default_language)
         })
         .on_menu_event(|app, event| {
@@ -790,6 +955,10 @@ fn main() {
                 let _ = app.emit("menu-set-theme", "solarized-dark");
             } else if event.id() == "lang_en" {
                 println!("🌐 User selected: English");
+                // Save preference to persistent storage
+                if let Err(e) = save_language_to_storage("en") {
+                    println!("❌ Failed to save language preference: {}", e);
+                }
                 // Update menu directly
                 if let Ok(menu) = create_app_menu(&app, "en") {
                     let _ = app.set_menu(menu);
@@ -803,6 +972,10 @@ fn main() {
                 println!("✅ Language changed to: English");
             } else if event.id() == "lang_zh" {
                 println!("🌐 User selected: Chinese");
+                // Save preference to persistent storage
+                if let Err(e) = save_language_to_storage("zh") {
+                    println!("❌ Failed to save language preference: {}", e);
+                }
                 // Update menu directly
                 if let Ok(menu) = create_app_menu(&app, "zh") {
                     let _ = app.set_menu(menu);
@@ -864,6 +1037,8 @@ fn main() {
             get_system_locale,
             get_language,
             set_language,
+            get_user_settings,
+            save_language_preference,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
