@@ -62,7 +62,7 @@ export function ThemeSelector() {
           {t('themes.light_themes')}
         </div>
 
-        {lightThemes.map(([name, theme]) => (
+        {lightThemes.map(([name]) => (
           <DropdownMenuItem
             key={name}
             onClick={() => handleThemeSelect(name as ThemeName)}
@@ -82,7 +82,7 @@ export function ThemeSelector() {
           {t('themes.dark_themes')}
         </div>
 
-        {darkThemes.map(([name, theme]) => (
+        {darkThemes.map(([name]) => (
           <DropdownMenuItem
             key={name}
             onClick={() => handleThemeSelect(name as ThemeName)}

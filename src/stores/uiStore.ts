@@ -25,6 +25,8 @@ interface UIState {
   initializeTheme: () => void;
 }
 
+type PersistedUIState = Pick<UIState, 'currentTheme' | 'sidebarVisible' | 'fontSize' | 'fontFamily' | 'sidebarWidth' | 'editorMode'>;
+
 export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
@@ -106,7 +108,7 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: 'ui-preferences',
-      partialize: (state) => ({
+      partialize: (state): PersistedUIState => ({
         currentTheme: state.currentTheme,
         sidebarVisible: state.sidebarVisible,
         fontSize: state.fontSize,
@@ -124,6 +126,6 @@ export const useUIStore = create<UIState>()(
           }
         }
       },
-    } as PersistOptions<UIState>
+    } as PersistOptions<UIState, PersistedUIState>
   )
 );
