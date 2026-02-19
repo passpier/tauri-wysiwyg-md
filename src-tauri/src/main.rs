@@ -8,6 +8,8 @@ use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, State};
+use walkdir::WalkDir;
+use regex::RegexBuilder;
 
 // State management
 struct AppState {
@@ -147,6 +149,8 @@ fn get_label(lang: &str, key: &str) -> String {
             "edit_copy" => "複製".to_string(),
             "edit_paste" => "貼上".to_string(),
             "edit_select_all" => "全選".to_string(),
+            "edit_find" => "尋找".to_string(),
+            "edit_find_in_files" => "在檔案中尋找".to_string(),
             "window" => "視窗".to_string(),
             "help" => "說明".to_string(),
             "lang_en" => "English".to_string(),
@@ -192,6 +196,8 @@ fn get_label(lang: &str, key: &str) -> String {
             "edit_copy" => "Copy".to_string(),
             "edit_paste" => "Paste".to_string(),
             "edit_select_all" => "Select All".to_string(),
+            "edit_find" => "Find...".to_string(),
+            "edit_find_in_files" => "Find in Files".to_string(),
             "window" => "Window".to_string(),
             "help" => "Help".to_string(),
             "lang_en" => "English".to_string(),
@@ -331,6 +337,103 @@ async fn rename_file(old_path: String, new_path: String) -> Result<(), String> {
 #[tauri::command]
 fn file_exists(path: String) -> bool {
     PathBuf::from(path).exists()
+}
+
+// Search result for cross-file search
+#[derive(Serialize, Clone)]
+struct SearchResult {
+    file_path: String,
+    line_number: usize,
+    line_content: String,
+    match_start: usize,
+    match_end: usize,
+}
+
+// Search across all markdown files in a directory
+#[tauri::command]
+async fn search_in_files(
+    root: String,
+    query: String,
+    case_sensitive: bool,
+    use_regex: bool,
+) -> Result<Vec<SearchResult>, String> {
+    if query.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let pattern = if use_regex {
+        query.clone()
+    } else {
+        regex::escape(&query)
+    };
+
+    let re = RegexBuilder::new(&pattern)
+        .case_insensitive(!case_sensitive)
+        .build()
+        .map_err(|e| format!("Invalid regex: {}", e))?;
+
+    let mut results: Vec<SearchResult> = Vec::new();
+    const MAX_RESULTS: usize = 500;
+
+    for entry in WalkDir::new(&root)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if results.len() >= MAX_RESULTS {
+            break;
+        }
+
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        let ext = path.extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        if ext != "md" && ext != "markdown" {
+            continue;
+        }
+
+        // Skip hidden files/dirs
+        let is_hidden = path.components().any(|c| {
+            c.as_os_str().to_str().map(|s| s.starts_with('.')).unwrap_or(false)
+        });
+        if is_hidden {
+            continue;
+        }
+
+        let content = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let file_path_str = path.to_string_lossy().to_string();
+
+        for (line_idx, line) in content.lines().enumerate() {
+            if results.len() >= MAX_RESULTS {
+                break;
+            }
+
+            for m in re.find_iter(line) {
+                results.push(SearchResult {
+                    file_path: file_path_str.clone(),
+                    line_number: line_idx + 1,
+                    line_content: line.to_string(),
+                    match_start: m.start(),
+                    match_end: m.end(),
+                });
+
+                if results.len() >= MAX_RESULTS {
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(results)
 }
 
 /**
@@ -625,6 +728,20 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
     // override the macOS system-language default with our app language.
     if let Some(idx) = edit_index {
         menu.remove_at(idx)?;
+        let find_item = MenuItem::with_id(
+            handle,
+            "edit_find",
+            get_label(lang, "edit_find"),
+            true,
+            Some("CmdOrCtrl+F"),
+        )?;
+        let find_in_files_item = MenuItem::with_id(
+            handle,
+            "edit_find_in_files",
+            get_label(lang, "edit_find_in_files"),
+            true,
+            Some("CmdOrCtrl+Shift+F"),
+        )?;
         let edit_menu = Submenu::with_items(
             handle,
             get_label(lang, "edit"),
@@ -638,6 +755,9 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
                 &PredefinedMenuItem::paste(handle, Some(&get_label(lang, "edit_paste")))?,
                 &PredefinedMenuItem::separator(handle)?,
                 &PredefinedMenuItem::select_all(handle, Some(&get_label(lang, "edit_select_all")))?,
+                &PredefinedMenuItem::separator(handle)?,
+                &find_item,
+                &find_in_files_item,
             ],
         )?;
         menu.insert(&edit_menu, idx)?;
@@ -1055,6 +1175,10 @@ fn main() {
                 emit_editor_command(app, "code_block", None);
             } else if event.id() == "editor_horizontal_rule" {
                 emit_editor_command(app, "horizontal_rule", None);
+            } else if event.id() == "edit_find" {
+                let _ = app.emit("menu-find", ());
+            } else if event.id() == "edit_find_in_files" {
+                let _ = app.emit("menu-find-in-files", ());
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -1075,6 +1199,7 @@ fn main() {
             set_language,
             get_user_settings,
             save_language_preference,
+            search_in_files,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

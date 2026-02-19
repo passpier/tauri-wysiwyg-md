@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Search highlight decorations */
+.search-result {
+  background-color: rgba(255, 213, 0, 0.4);
+  border-radius: 2px;
+}
+
+.search-result-current {
+  background-color: rgba(255, 140, 0, 0.6);
+  border-radius: 2px;
+  outline: 1px solid rgba(255, 140, 0, 0.9);
+}
+
 @layer base {
   :root {
     /* Theme CSS variables (defaults to GitHub Light) */

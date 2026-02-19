@@ -8,7 +8,7 @@ import TableRow from '@tiptap/extension-table-row';
 import TableHeader from '@tiptap/extension-table-header';
 import TableCell from '@tiptap/extension-table-cell';
 import { createLowlight, common } from 'lowlight';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -16,6 +16,8 @@ import { useEditorLayout } from '@/hooks/useEditorLayout';
 import { debounce } from '@/lib/utils';
 import '@/components/CodeBlockRenderer/CodeBlockRenderer.css';
 import { CodeBlockNodeView } from './CodeBlockNodeView';
+import { SearchExtension, type SearchStorage } from './searchExtension';
+import { FindBar } from './FindBar';
 
 interface EditorProps {
   documentId: string;
@@ -27,9 +29,14 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
   const fontSize = useUIStore((state) => state.fontSize);
   const fontFamily = useUIStore((state) => state.fontFamily);
   const setEditor = useEditorStore((state) => state.setEditor);
+  const findBarVisible = useUIStore((state) => state.findBarVisible);
+  const setFindBarVisible = useUIStore((state) => state.setFindBarVisible);
   const containerRef = useRef<HTMLDivElement>(null);
   const layoutMetrics = useEditorLayout(containerRef);
   const [hasMeasuredLayout, setHasMeasuredLayout] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [replaceTerm, setReplaceTerm] = useState('');
+  const [replaceVisible, setReplaceVisible] = useState(false);
   const document = documents.find(d => d.id === documentId);
 
   // Create lowlight instance with a smaller default language set
@@ -73,6 +80,7 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
       TableRow,
       TableHeader,
       TableCell,
+      SearchExtension,
     ],
     content: document?.content || '',
     editorProps: {
@@ -82,7 +90,7 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
       },
     },
     onUpdate: debounce(({ editor }) => {
-      const markdown = editor.storage.markdown.getMarkdown();
+      const markdown = (editor.storage['markdown'] as { getMarkdown: () => string }).getMarkdown();
       updateContent(documentId, markdown);
     }, 500),
   });
@@ -94,7 +102,7 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
 
   // Update editor content when document changes
   useEffect(() => {
-    if (editor && document && editor.storage.markdown.getMarkdown() !== document.content) {
+    if (editor && document && (editor.storage['markdown'] as { getMarkdown: () => string }).getMarkdown() !== document.content) {
       console.log('📄 Loading document content:', document.content.substring(0, 100) + '...');
       
       // Clear any old enhancement wrappers before setting content
@@ -131,6 +139,56 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
     }
   }, [hasMeasuredLayout, layoutMetrics.contentWidth]);
 
+  // Sync search term into Tiptap search extension
+  useEffect(() => {
+    if (editor && findBarVisible) {
+      editor.commands.setSearchTerm(searchTerm);
+    } else if (editor && !findBarVisible) {
+      editor.commands.setSearchTerm('');
+      setSearchTerm('');
+    }
+  }, [searchTerm, findBarVisible, editor]);
+
+  // Close find bar when document changes
+  useEffect(() => {
+    setFindBarVisible(false);
+  }, [documentId, setFindBarVisible]);
+
+  const matchCount = (editor?.storage['search'] as SearchStorage | undefined)?.results?.length ?? 0;
+  const currentMatch = matchCount > 0 ? ((editor?.storage['search'] as SearchStorage | undefined)?.currentIndex ?? 0) + 1 : 0;
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
+  const handleReplaceChange = useCallback((value: string) => {
+    setReplaceTerm(value);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    editor?.commands.findNext();
+  }, [editor]);
+
+  const handlePrev = useCallback(() => {
+    editor?.commands.findPrev();
+  }, [editor]);
+
+  const handleReplace = useCallback(() => {
+    editor?.commands.replaceCurrentMatch(replaceTerm);
+  }, [editor, replaceTerm]);
+
+  const handleReplaceAll = useCallback(() => {
+    editor?.commands.replaceAllMatches(replaceTerm);
+  }, [editor, replaceTerm]);
+
+  const handleCloseFindBar = useCallback(() => {
+    setFindBarVisible(false);
+    editor?.commands.focus();
+  }, [setFindBarVisible, editor]);
+
+  const handleToggleReplace = useCallback(() => {
+    setReplaceVisible((v) => !v);
+  }, []);
 
   if (!document) {
     return (
@@ -141,21 +199,40 @@ export const Editor = memo(function Editor({ documentId }: EditorProps) {
   }
 
   return (
-    <div 
-      ref={containerRef}
-      className="h-full w-full overflow-auto flex justify-center px-4 py-6"
-      data-layout-metrics={JSON.stringify(layoutMetrics)}
-    >
-      <EditorContent 
-        editor={editor} 
-        className="h-full"
-        style={{
-          width: '100%',
-          maxWidth: hasMeasuredLayout ? `${layoutMetrics.contentWidth}px` : undefined,
-          transition: hasMeasuredLayout ? 'max-width 200ms ease, width 200ms ease' : 'none',
-          willChange: hasMeasuredLayout ? 'max-width, width' : 'auto',
-        }}
-      />
+    <div className="relative h-full w-full">
+      {findBarVisible && (
+        <FindBar
+          searchTerm={searchTerm}
+          replaceTerm={replaceTerm}
+          matchCount={matchCount}
+          currentMatch={currentMatch}
+          replaceVisible={replaceVisible}
+          onSearchChange={handleSearchChange}
+          onReplaceChange={handleReplaceChange}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          onReplace={handleReplace}
+          onReplaceAll={handleReplaceAll}
+          onClose={handleCloseFindBar}
+          onToggleReplace={handleToggleReplace}
+        />
+      )}
+      <div
+        ref={containerRef}
+        className="h-full w-full overflow-auto flex justify-center px-4 py-6"
+        data-layout-metrics={JSON.stringify(layoutMetrics)}
+      >
+        <EditorContent
+          editor={editor}
+          className="h-full"
+          style={{
+            width: '100%',
+            maxWidth: hasMeasuredLayout ? `${layoutMetrics.contentWidth}px` : undefined,
+            transition: hasMeasuredLayout ? 'max-width 200ms ease, width 200ms ease' : 'none',
+            willChange: hasMeasuredLayout ? 'max-width, width' : 'auto',
+          }}
+        />
+      </div>
     </div>
   );
 });

@@ -13,7 +13,9 @@
     "new_file": "New File",
     "recent_files": "RECENT FILES",
     "no_files_found": "No markdown files found",
-    "open_folder_to_browse": "Open a folder to browse files"
+    "open_folder_to_browse": "Open a folder to browse files",
+    "tab_files": "Files",
+    "tab_search": "Search"
   },
   "editor": {
     "placeholder": "Type your markdown here..."
@@ -62,5 +64,26 @@
     "view": "View",
     "theme": "Theme",
     "source_code": "Source Code"
+  },
+  "find": {
+    "find_placeholder": "Find...",
+    "replace_placeholder": "Replace...",
+    "no_results": "No results",
+    "match_count": "{{current}} of {{total}}",
+    "previous": "Previous match (Shift+Enter)",
+    "next": "Next match (Enter)",
+    "close": "Close (Escape)",
+    "replace": "Replace",
+    "replace_all": "Replace All",
+    "show_replace": "Show replace",
+    "hide_replace": "Hide replace"
+  },
+  "search": {
+    "placeholder": "Search files...",
+    "case_sensitive": "Case sensitive",
+    "use_regex": "Use regular expression",
+    "no_results": "No results found",
+    "result_summary": "{{matches}} results in {{files}} files",
+    "open_folder_first": "Open a folder in the Files tab to search across files"
   }
 }

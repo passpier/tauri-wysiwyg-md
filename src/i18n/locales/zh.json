@@ -13,7 +13,9 @@
     "new_file": "新檔案",
     "recent_files": "最近使用的檔案",
     "no_files_found": "找不到 Markdown 檔案",
-    "open_folder_to_browse": "開啟資料夾以瀏覽檔案"
+    "open_folder_to_browse": "開啟資料夾以瀏覽檔案",
+    "tab_files": "檔案",
+    "tab_search": "搜尋"
   },
   "editor": {
     "placeholder": "在這裡輸入 Markdown..."
@@ -62,5 +64,26 @@
     "view": "檢視",
     "theme": "佈景主題",
     "source_code": "原始碼"
+  },
+  "find": {
+    "find_placeholder": "尋找...",
+    "replace_placeholder": "取代...",
+    "no_results": "無結果",
+    "match_count": "第 {{current}} / {{total}} 個",
+    "previous": "上一個符合項目（Shift+Enter）",
+    "next": "下一個符合項目（Enter）",
+    "close": "關閉（Escape）",
+    "replace": "取代",
+    "replace_all": "全部取代",
+    "show_replace": "顯示取代",
+    "hide_replace": "隱藏取代"
+  },
+  "search": {
+    "placeholder": "搜尋檔案...",
+    "case_sensitive": "區分大小寫",
+    "use_regex": "使用正規表示式",
+    "no_results": "找不到結果",
+    "result_summary": "{{files}} 個檔案中共 {{matches}} 個結果",
+    "open_folder_first": "請先在「檔案」分頁開啟資料夾以搜尋檔案"
   }
 }

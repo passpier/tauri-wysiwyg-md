@@ -11,6 +11,8 @@ interface UIState {
   sidebarWidth: number;
   osPlatform: 'macos' | 'windows' | 'gnome' | null;
   editorMode: 'wysiwyg' | 'source';
+  sidebarTab: 'files' | 'search';
+  findBarVisible: boolean;
   // Actions
   setCurrentTheme: (theme: ThemeName) => void;
   toggleTheme: () => void;
@@ -23,9 +25,12 @@ interface UIState {
   setEditorMode: (mode: 'wysiwyg' | 'source') => void;
   toggleEditorMode: () => void;
   initializeTheme: () => void;
+  setSidebarTab: (tab: 'files' | 'search') => void;
+  setFindBarVisible: (visible: boolean) => void;
+  toggleFindBar: () => void;
 }
 
-type PersistedUIState = Pick<UIState, 'currentTheme' | 'sidebarVisible' | 'fontSize' | 'fontFamily' | 'sidebarWidth' | 'editorMode'>;
+type PersistedUIState = Pick<UIState, 'currentTheme' | 'sidebarVisible' | 'fontSize' | 'fontFamily' | 'sidebarWidth' | 'editorMode' | 'sidebarTab'>;
 
 export const useUIStore = create<UIState>()(
   persist(
@@ -36,6 +41,8 @@ export const useUIStore = create<UIState>()(
       fontFamily: 'system-ui, -apple-system, sans-serif',
       sidebarWidth: 280,
       editorMode: 'wysiwyg',
+      sidebarTab: 'files',
+      findBarVisible: false,
       osPlatform: (() => {
         if (typeof navigator !== 'undefined') {
           if (navigator.userAgent.includes('Macintosh')) return 'macos';
@@ -105,6 +112,13 @@ export const useUIStore = create<UIState>()(
         const state = get();
         applyTheme(state.currentTheme);
       },
+
+      setSidebarTab: (tab) => set({ sidebarTab: tab }),
+
+      setFindBarVisible: (visible) => set({ findBarVisible: visible }),
+
+      toggleFindBar: () =>
+        set((state) => ({ findBarVisible: !state.findBarVisible })),
     }),
     {
       name: 'ui-preferences',
@@ -115,7 +129,8 @@ export const useUIStore = create<UIState>()(
         fontFamily: state.fontFamily,
         sidebarWidth: state.sidebarWidth,
         editorMode: state.editorMode,
-        // osPlatform is excluded from persistence to ensure fresh detection on startup
+        sidebarTab: state.sidebarTab,
+        // osPlatform and findBarVisible are excluded from persistence
       }),
       onRehydrate: (state: unknown) => {
         // Apply theme after hydration from localStorage

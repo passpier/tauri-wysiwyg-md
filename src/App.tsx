@@ -34,9 +34,12 @@ function App() {
   const initializeTheme = useUIStore((state) => state.initializeTheme);
   const sidebarVisible = useUIStore((state) => state.sidebarVisible);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const setSidebarVisible = useUIStore((state) => state.setSidebarVisible);
   const editorMode = useUIStore((state) => state.editorMode);
   const toggleEditorMode = useUIStore((state) => state.toggleEditorMode);
   const osPlatform = useUIStore((state) => state.osPlatform);
+  const setFindBarVisible = useUIStore((state) => state.setFindBarVisible);
+  const setSidebarTab = useUIStore((state) => state.setSidebarTab);
   const language = useSettingsStore((state) => state.language);
   const hasInitializedDocument = useRef(false);
   const editor = useEditorStore((state) => state.editor);
@@ -48,6 +51,26 @@ function App() {
 
   // Initialize auto-save
   useAutoSave();
+
+  // Global keyboard shortcuts for find
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = osPlatform === 'macos';
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+      if (!modifier) return;
+
+      if (e.key === 'f' && !e.shiftKey) {
+        e.preventDefault();
+        setFindBarVisible(true);
+      } else if (e.key === 'F' && e.shiftKey) {
+        e.preventDefault();
+        setSidebarVisible(true);
+        setSidebarTab('search');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [osPlatform, setFindBarVisible, setSidebarVisible, setSidebarTab]);
 
   const activeDocument = documents.find(d => d.id === activeDocumentId);
 
@@ -372,6 +395,13 @@ function App() {
               runEditorCommand(event.payload);
             }
           ),
+          listen('menu-find', () => {
+            setFindBarVisible(true);
+          }),
+          listen('menu-find-in-files', () => {
+            setSidebarVisible(true);
+            setSidebarTab('search');
+          }),
         ]);
 
         if (!isActive) {
@@ -392,7 +422,7 @@ function App() {
       menuUnlistenersRef.current.forEach(unlisten => unlisten());
       menuUnlistenersRef.current = [];
     };
-  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar]);
+  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar, setFindBarVisible, setSidebarVisible, setSidebarTab]);
 
   const titlebarClassName = useMemo(() => {
     if (osPlatform === 'macos') {

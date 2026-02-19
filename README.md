@@ -1,6 +1,6 @@
 # MarkBear
 
-A modern, desktop Markdown editor built with [Tauri](https://tauri.app/), [React](https://react.dev/), and [Tiptap](https://tiptap.dev/). Edit Markdown documents with a beautiful WYSIWYG interface and rich text formatting.
+A beautiful desktop Markdown editor with a clean, visual writing experience. Write and edit Markdown documents naturally.
 
 ## Screenshots
 
@@ -13,13 +13,11 @@ A modern, desktop Markdown editor built with [Tauri](https://tauri.app/), [React
 
 ## Features
 
-- **WYSIWYG Markdown Editing** - Edit Markdown with a visual interface powered by Tiptap v2
-- **Table Support** - Full GFM markdown table support with visual editing and resizable columns
-- **File Management** - Open, save, and manage Markdown files with native file dialogs
-- **Rich Text Formatting** - Support for bold, italic, lists, code blocks, blockquotes, and more
-- **Auto-save** - Automatically save your work at regular intervals
-- **Recent Files** - Quick access to recently opened documents
-- **Theme** - Supported UI themes: GitHub Light, GitHub Dark, Dracula, Nord Light, Nord Dark, Solarized Light, Solarized Dark
+- **Visual Markdown Editing** — Write and edit Markdown the way you see it, without dealing with raw symbols
+- **File Management** — Open, save, and manage your Markdown files using native system dialogs
+- **Rich Text Formatting** — Bold, italic, lists, code blocks, blockquotes, and more — all at your fingertips
+- **Auto-save** — Your work is saved automatically at regular intervals, so you never lose progress
+- **Multiple Themes** — Choose from seven built-in UI themes
 
 ## Tech Stack
 
@@ -35,7 +33,7 @@ A modern, desktop Markdown editor built with [Tauri](https://tauri.app/), [React
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16 or later)
+- [Node.js](https://nodejs.org/) (v20 or later)
 - [pnpm](https://pnpm.io/) (or npm/yarn)
 - [Rust](https://www.rust-lang.org/) (for Tauri desktop builds)
 
