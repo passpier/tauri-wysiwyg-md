@@ -19,6 +19,13 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 walkdir = "2"
 regex = "1"
+docx-rs = "0.4"
+calamine = { version = "0.33", features = ["dates"] }
+rust_xlsxwriter = "0.93"
+pulldown-cmark = "0.13"
+markdown2pdf = "0.2"
+pdf-extract = "0.10"
+zip = "2"
 
 [features]
 default = ["custom-protocol"]

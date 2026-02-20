@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod convert;
+
 use std::collections::VecDeque;
 use std::fs;
 use std::path::PathBuf;
@@ -155,6 +157,16 @@ fn get_label(lang: &str, key: &str) -> String {
             "help" => "說明".to_string(),
             "lang_en" => "English".to_string(),
             "lang_zh" => "繁體中文".to_string(),
+            "file_import" => "匯入".to_string(),
+            "file_import_docx" => "從 Word (.docx)".to_string(),
+            "file_import_xlsx" => "從試算表 (.xlsx)".to_string(),
+            "file_import_pdf"  => "從 PDF".to_string(),
+            "file_import_pptx" => "從 PowerPoint (.pptx)".to_string(),
+            "file_export" => "匯出".to_string(),
+            "file_export_docx" => "匯出為 Word (.docx)...".to_string(),
+            "file_export_xlsx" => "匯出為試算表 (.xlsx)...".to_string(),
+            "file_export_pdf"  => "匯出為 PDF...".to_string(),
+            "file_export_pptx" => "匯出為 PowerPoint (.pptx)...".to_string(),
             _ => key.to_string(),
         },
         _ => match key {
@@ -202,6 +214,16 @@ fn get_label(lang: &str, key: &str) -> String {
             "help" => "Help".to_string(),
             "lang_en" => "English".to_string(),
             "lang_zh" => "繁體中文".to_string(),
+            "file_import" => "Import".to_string(),
+            "file_import_docx" => "From Word (.docx)".to_string(),
+            "file_import_xlsx" => "From Spreadsheet (.xlsx)".to_string(),
+            "file_import_pdf"  => "From PDF".to_string(),
+            "file_import_pptx" => "From PowerPoint (.pptx)".to_string(),
+            "file_export" => "Export".to_string(),
+            "file_export_docx" => "Export as Word (.docx)...".to_string(),
+            "file_export_xlsx" => "Export as Spreadsheet (.xlsx)...".to_string(),
+            "file_export_pdf"  => "Export as PDF...".to_string(),
+            "file_export_pptx" => "Export as PowerPoint (.pptx)...".to_string(),
             _ => key.to_string(),
         },
     }
@@ -543,6 +565,51 @@ fn update_menu_item_state(app: AppHandle, id: String, checked: bool) -> Result<(
     Ok(())
 }
 
+// Enable or disable a menu item by id
+#[tauri::command]
+fn enable_menu_item(app: AppHandle, id: String, enabled: bool) -> Result<(), String> {
+    if let Some(menu) = app.menu() {
+        if let Some(item) = menu.get(&id) {
+            match item {
+                tauri::menu::MenuItemKind::MenuItem(mi) => mi.set_enabled(enabled).map_err(|e| e.to_string())?,
+                tauri::menu::MenuItemKind::Submenu(sm) => sm.set_enabled(enabled).map_err(|e| e.to_string())?,
+                tauri::menu::MenuItemKind::Check(cm) => cm.set_enabled(enabled).map_err(|e| e.to_string())?,
+                tauri::menu::MenuItemKind::Icon(im) => im.set_enabled(enabled).map_err(|e| e.to_string())?,
+                tauri::menu::MenuItemKind::Predefined(_) => {}
+            }
+        }
+    }
+    Ok(())
+}
+
+// Import a document from a non-markdown format and return Markdown content
+#[tauri::command]
+async fn import_document(path: String, format: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || match format.as_str() {
+        "docx" => convert::docx::docx_to_markdown(&path).map_err(String::from),
+        "xlsx" => convert::xlsx::xlsx_to_markdown(&path).map_err(String::from),
+        "pdf"  => convert::pdf::pdf_to_markdown(&path).map_err(String::from),
+        "pptx" => convert::pptx::pptx_to_markdown(&path).map_err(String::from),
+        other  => Err(format!("Unsupported import format: {}", other)),
+    })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
+}
+
+// Export Markdown content to a non-markdown format
+#[tauri::command]
+async fn export_document(content: String, path: String, format: String) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || match format.as_str() {
+        "docx" => convert::docx::markdown_to_docx(&content, &path).map_err(String::from),
+        "xlsx" => convert::xlsx::markdown_to_xlsx(&content, &path).map_err(String::from),
+        "pdf"  => convert::pdf::markdown_to_pdf(&content, &path).map_err(String::from),
+        "pptx" => convert::pptx::markdown_to_pptx(&content, &path).map_err(String::from),
+        other  => Err(format!("Unsupported export format: {}", other)),
+    })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
+}
+
 // Drain any pending open-file requests (used on app startup).
 #[tauri::command]
 fn take_pending_open_files(state: State<AppState>) -> Result<Vec<String>, String> {
@@ -695,7 +762,33 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
         true,
         Some("CmdOrCtrl+W"),
     )?;
+
+    // Import submenu
+    let import_docx_item = MenuItem::with_id(handle, "file_import_docx", get_label(lang, "file_import_docx"), true, None::<&str>)?;
+    let import_xlsx_item = MenuItem::with_id(handle, "file_import_xlsx", get_label(lang, "file_import_xlsx"), true, None::<&str>)?;
+    let import_pdf_item  = MenuItem::with_id(handle, "file_import_pdf",  get_label(lang, "file_import_pdf"),  true, None::<&str>)?;
+    let import_pptx_item = MenuItem::with_id(handle, "file_import_pptx", get_label(lang, "file_import_pptx"), true, None::<&str>)?;
+    let import_submenu = Submenu::with_items(
+        handle,
+        get_label(lang, "file_import"),
+        true,
+        &[&import_docx_item, &import_xlsx_item, &import_pdf_item, &import_pptx_item],
+    )?;
+
+    // Export submenu
+    let export_docx_item = MenuItem::with_id(handle, "file_export_docx", get_label(lang, "file_export_docx"), true, None::<&str>)?;
+    let export_xlsx_item = MenuItem::with_id(handle, "file_export_xlsx", get_label(lang, "file_export_xlsx"), true, None::<&str>)?;
+    let export_pdf_item  = MenuItem::with_id(handle, "file_export_pdf",  get_label(lang, "file_export_pdf"),  true, None::<&str>)?;
+    let export_pptx_item = MenuItem::with_id(handle, "file_export_pptx", get_label(lang, "file_export_pptx"), true, None::<&str>)?;
+    let export_submenu = Submenu::with_items(
+        handle,
+        get_label(lang, "file_export"),
+        true,
+        &[&export_docx_item, &export_xlsx_item, &export_pdf_item, &export_pptx_item],
+    )?;
+
     let file_separator = PredefinedMenuItem::separator(handle)?;
+    let import_export_separator = PredefinedMenuItem::separator(handle)?;
 
     let mut file_menu_found = false;
     let mut edit_index: Option<usize> = None;
@@ -710,6 +803,9 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
                     &save_item,
                     &save_as_item,
                     &close_document_item,
+                    &import_export_separator,
+                    &import_submenu,
+                    &export_submenu,
                     &file_separator,
                 ])?;
                 file_menu_found = true;
@@ -775,6 +871,9 @@ fn create_app_menu<R: tauri::Runtime>(handle: &AppHandle<R>, lang: &str) -> taur
                 &save_item,
                 &save_as_item,
                 &close_document_item,
+                &import_export_separator,
+                &import_submenu,
+                &export_submenu,
                 &PredefinedMenuItem::close_window(handle, Some("CmdOrCtrl+Shift+W"))?,
             ],
         )?;
@@ -1179,6 +1278,12 @@ fn main() {
                 let _ = app.emit("menu-find", ());
             } else if event.id() == "edit_find_in_files" {
                 let _ = app.emit("menu-find-in-files", ());
+            } else if event.id().0.starts_with("file_import_") {
+                let fmt = event.id().0.strip_prefix("file_import_").unwrap_or("").to_string();
+                let _ = app.emit("menu-import", fmt);
+            } else if event.id().0.starts_with("file_export_") {
+                let fmt = event.id().0.strip_prefix("file_export_").unwrap_or("").to_string();
+                let _ = app.emit("menu-export", fmt);
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -1192,6 +1297,9 @@ fn main() {
             rename_file,
             file_exists,
             update_menu_item_state,
+            enable_menu_item,
+            import_document,
+            export_document,
             take_pending_open_files,
             get_os_platform,
             get_system_locale,

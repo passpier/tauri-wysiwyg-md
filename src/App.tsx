@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
@@ -45,6 +45,12 @@ function App() {
   const editor = useEditorStore((state) => state.editor);
   const menuUnlistenersRef = useRef<Array<() => void>>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [importExportStatus, setImportExportStatus] = useState<{
+    type: 'import' | 'export';
+    format: string;
+    state: 'loading' | 'success' | 'error';
+    message?: string;
+  } | null>(null);
 
   // Initialize platform detection early (before first render ideally)
   usePlatformInitialization();
@@ -234,6 +240,108 @@ function App() {
     }
   }, [documents.length, activeDocumentId, createNewDocument]);
 
+  const handleImport = useCallback(async (format: string) => {
+    const extensionMap: Record<string, string[]> = {
+      docx: ['docx'],
+      xlsx: ['xlsx', 'xls', 'ods'],
+      pdf: ['pdf'],
+      pptx: ['pptx', 'ppt'],
+    };
+    const filterName: Record<string, string> = {
+      docx: 'Word Document',
+      xlsx: 'Spreadsheet',
+      pdf: 'PDF Document',
+      pptx: 'PowerPoint Presentation',
+    };
+
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: filterName[format] ?? format.toUpperCase(), extensions: extensionMap[format] ?? [format] }],
+      });
+
+      const filePath = Array.isArray(selected) ? selected[0] : selected;
+      if (!filePath || typeof filePath !== 'string') return;
+
+      setImportExportStatus({ type: 'import', format, state: 'loading' });
+
+      const markdown = await invoke<string>('import_document', { path: filePath, format });
+
+      const importedDoc = {
+        id: crypto.randomUUID(),
+        path: null,
+        content: markdown,
+        isDirty: true,
+        lastSaved: null,
+      };
+      useDocumentStore.setState((state) => ({
+        documents: [...state.documents, importedDoc],
+        activeDocumentId: importedDoc.id,
+      }));
+
+      setImportExportStatus({ type: 'import', format, state: 'success' });
+      setTimeout(() => setImportExportStatus(null), 3000);
+    } catch (err) {
+      console.error('Import failed:', err);
+      setImportExportStatus({
+        type: 'import',
+        format,
+        state: 'error',
+        message: String(err),
+      });
+      setTimeout(() => setImportExportStatus(null), 6000);
+    }
+  }, []);
+
+  const handleExport = useCallback(async (format: string) => {
+    const doc = useDocumentStore.getState().documents.find(
+      (d) => d.id === useDocumentStore.getState().activeDocumentId
+    );
+    if (!doc) return;
+
+    const extensionMap: Record<string, string> = {
+      docx: 'docx',
+      xlsx: 'xlsx',
+      pdf: 'pdf',
+      pptx: 'pptx',
+    };
+    const filterName: Record<string, string> = {
+      docx: 'Word Document',
+      xlsx: 'Spreadsheet',
+      pdf: 'PDF Document',
+      pptx: 'PowerPoint Presentation',
+    };
+
+    const baseName = doc.path
+      ? doc.path.split('/').pop()?.replace(/\.(md|markdown)$/, '') ?? 'document'
+      : 'document';
+
+    try {
+      const filePath = await save({
+        defaultPath: `${baseName}.${extensionMap[format] ?? format}`,
+        filters: [{ name: filterName[format] ?? format.toUpperCase(), extensions: [extensionMap[format] ?? format] }],
+      });
+
+      if (!filePath) return;
+
+      setImportExportStatus({ type: 'export', format, state: 'loading' });
+
+      await invoke('export_document', { content: doc.content, path: filePath, format });
+
+      setImportExportStatus({ type: 'export', format, state: 'success' });
+      setTimeout(() => setImportExportStatus(null), 3000);
+    } catch (err) {
+      console.error('Export failed:', err);
+      setImportExportStatus({
+        type: 'export',
+        format,
+        state: 'error',
+        message: String(err),
+      });
+      setTimeout(() => setImportExportStatus(null), 6000);
+    }
+  }, []);
+
   const handleOpenFile = async () => {
     try {
       const selected = await open({
@@ -402,6 +510,8 @@ function App() {
             setSidebarVisible(true);
             setSidebarTab('search');
           }),
+          listen<string>('menu-import', (e) => void handleImport(e.payload)),
+          listen<string>('menu-export', (e) => void handleExport(e.payload)),
         ]);
 
         if (!isActive) {
@@ -422,7 +532,13 @@ function App() {
       menuUnlistenersRef.current.forEach(unlisten => unlisten());
       menuUnlistenersRef.current = [];
     };
-  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar, setFindBarVisible, setSidebarVisible, setSidebarTab]);
+  }, [editor, activeDocumentId, createNewDocument, closeDocument, toggleSidebar, setFindBarVisible, setSidebarVisible, setSidebarTab, handleImport, handleExport]);
+
+  // Enable/disable export menu items based on whether a document is active
+  useEffect(() => {
+    const ids = ['file_export_docx', 'file_export_xlsx', 'file_export_pdf', 'file_export_pptx'];
+    ids.forEach((id) => void invoke('enable_menu_item', { id, enabled: !!activeDocument }));
+  }, [activeDocument]);
 
   const titlebarClassName = useMemo(() => {
     if (osPlatform === 'macos') {
@@ -531,6 +647,35 @@ function App() {
           )}
         </div>
       </div>
+      {/* Import/Export status toast */}
+      {importExportStatus && (
+        <div className={`fixed bottom-4 right-4 z-50 rounded-lg px-4 py-3 text-sm shadow-lg max-w-sm ${
+          importExportStatus.state === 'loading'
+            ? 'bg-muted text-muted-foreground'
+            : importExportStatus.state === 'success'
+            ? 'bg-green-500/15 text-green-700 dark:text-green-400'
+            : 'bg-destructive/15 text-destructive'
+        }`}>
+          {importExportStatus.state === 'loading' && (
+            <span>
+              {importExportStatus.type === 'import'
+                ? t('import_export.importing')
+                : t('import_export.exporting')}{' '}
+              {importExportStatus.format.toUpperCase()}…
+            </span>
+          )}
+          {importExportStatus.state === 'success' && (
+            <span>
+              {importExportStatus.type === 'import'
+                ? t('import_export.import_success')
+                : t('import_export.export_success')}
+            </span>
+          )}
+          {importExportStatus.state === 'error' && (
+            <span>{t('import_export.error_generic')}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

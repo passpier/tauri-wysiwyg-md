@@ -85,5 +85,12 @@
     "no_results": "No results found",
     "result_summary": "{{matches}} results in {{files}} files",
     "open_folder_first": "Open a folder in the Files tab to search across files"
+  },
+  "import_export": {
+    "importing": "Importing",
+    "exporting": "Exporting",
+    "import_success": "Import complete. Document opened as untitled.",
+    "export_success": "Export complete.",
+    "error_generic": "Conversion failed. Check the file and try again."
   }
 }
