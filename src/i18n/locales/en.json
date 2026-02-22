@@ -6,7 +6,8 @@
     "no_document_open": "No document open",
     "create_or_open": "Create a new document or open an existing one",
     "toggle_sidebar": "Toggle sidebar",
-    "markdown_editor": "Markdown Editor"
+    "markdown_editor": "Markdown Editor",
+    "char_count": "{{n}} chars"
   },
   "sidebar": {
     "open_folder": "Open Folder",

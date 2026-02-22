@@ -8,7 +8,6 @@ import { WindowTitlebar } from 'tauri-controls';
 import { Editor } from '@/components/Editor/Editor';
 import { SourceEditor } from '@/components/Editor/SourceEditor';
 import { Sidebar } from '@/components/Sidebar/Sidebar';
-import { ThemeSelector } from '@/components/ThemeSelector';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useEditorStore } from '@/stores/editorStore';
@@ -25,9 +24,7 @@ function App() {
   const { t, i18n } = useTranslation();
   const documents = useDocumentStore((state) => state.documents);
   const activeDocumentId = useDocumentStore((state) => state.activeDocumentId);
-  const saveDocument = useDocumentStore((state) => state.saveDocument);
   const closeDocument = useDocumentStore((state) => state.closeDocument);
-  const updateContent = useDocumentStore((state) => state.updateContent);
   const createNewDocument = useDocumentStore((state) => state.createNewDocument);
   const loadDocument = useDocumentStore((state) => state.loadDocument);
   
@@ -177,13 +174,15 @@ function App() {
   useEffect(() => {
     try {
       const currentWindow = getCurrentWindow();
-      const title = getDocumentTitle();
+      // In fullscreen, macOS shows a hover bar with the native window title.
+      // Use the app name only so the filename does not appear there.
+      const title = isFullscreen ? t('common.markdown_editor') : getDocumentTitle();
       document.title = title;
       void currentWindow.setTitle(title);
     } catch (error) {
       console.warn('Failed to update window title:', error);
     }
-  }, [activeDocument?.path, activeDocument?.isDirty]);
+  }, [activeDocument?.path, activeDocument?.isDirty, isFullscreen]);
 
   useEffect(() => {
     let isActive = true;
@@ -230,6 +229,8 @@ function App() {
       ? activeDocument.path.split('/').pop() ?? t('common.untitled')
       : t('common.untitled');
   })();
+
+  const charCount = activeDocument ? activeDocument.content.length : null;
 
   // Ensure a blank document exists for first launch
   useEffect(() => {
@@ -563,20 +564,6 @@ function App() {
     return 'h-10 flex items-center border-b bg-background/95 px-2';
   }, [osPlatform]);
 
-  const handleTitlebarMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-    const isNoDrag = !!target.closest('.titlebar-no-drag');
-    if (isNoDrag) {
-      return;
-    }
-    try {
-      const currentWindow = getCurrentWindow();
-      void currentWindow.startDragging();
-    } catch (error) {
-      console.warn('Failed to start dragging:', error);
-    }
-  };
-
   return (
     <div className="h-screen flex flex-col">
       {!isFullscreen && (
@@ -588,14 +575,13 @@ function App() {
             platform: osPlatform ?? undefined,
             hide: osPlatform === 'macos',
           }}
-          onMouseDown={handleTitlebarMouseDown}
         >
           <div className="flex w-full items-center gap-2">
             {osPlatform !== 'macos' && (
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground titlebar-no-drag"
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
                 aria-label="Toggle sidebar"
                 data-tauri-drag-region="false"
               >
@@ -603,20 +589,24 @@ function App() {
               </button>
             )}
             <div
-              className="flex flex-1 items-center justify-center gap-2 text-sm font-medium text-foreground/90 min-w-0 titlebar-drag"
+              className="flex flex-1 items-center justify-center gap-2 min-w-0"
               data-tauri-drag-region
             >
-              <span className="truncate">{documentTitle}</span>
+              <span className="truncate text-sm font-medium text-foreground/90">{documentTitle}</span>
               {activeDocument?.isDirty && (
                 <span className="text-xs font-semibold text-amber-500">{t('common.edited')}</span>
               )}
             </div>
-            <ThemeSelector />
+            {charCount !== null && (
+              <span className="text-xs text-muted-foreground" data-tauri-drag-region="false">
+                {t('common.char_count', { n: charCount.toLocaleString() })}
+              </span>
+            )}
             {osPlatform === 'macos' && (
               <button
                 type="button"
                 onClick={toggleSidebar}
-                className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground titlebar-no-drag"
+                className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
                 aria-label="Toggle sidebar"
                 data-tauri-drag-region="false"
               >

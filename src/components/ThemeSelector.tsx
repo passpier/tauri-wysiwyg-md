@@ -45,7 +45,8 @@ export function ThemeSelector() {
       ref={triggerRef}
       variant="ghost"
       size="sm"
-      className="gap-2 h-9 titlebar-no-drag"
+      className="gap-2 h-9"
+      data-tauri-drag-region="false"
       onKeyDown={handleKeyDown}
       aria-label={t('themes.select_theme')}
       title={t('themes.current_theme', { name: t(`themes.${currentTheme}`) })}
